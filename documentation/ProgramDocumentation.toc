@@ -1,0 +1,19 @@
+\contentsline {section}{A Note}{1}{section*.2}
+\contentsline {section}{\relax $\@@underline {\hbox {slifercal}}\mathsurround \z@ $\relax }{2}{section*.3}
+\contentsline {subsection}{Foreword}{2}{section*.4}
+\contentsline {subsection}{Initialization}{2}{section*.5}
+\contentsline {subsection}{Loading Previous Data}{2}{section*.6}
+\contentsline {subsubsection}{Usage}{2}{section*.7}
+\contentsline {subsection}{Analyze Data}{2}{section*.8}
+\contentsline {subsection}{General Plotting}{3}{section*.9}
+\contentsline {subsection}{Analysis Suite}{3}{section*.10}
+\contentsline {subsubsection}{range{\textunderscore }shift}{3}{section*.11}
+\contentsline {subsubsection}{range{\textunderscore }length}{3}{section*.12}
+\contentsline {subsection}{Graphing}{4}{section*.13}
+\contentsline {subsubsection}{n{\textunderscore }best}{4}{section*.14}
+\contentsline {subsubsection}{dpi{\textunderscore }val}{5}{section*.15}
+\contentsline {subsubsection}{plotwidth}{5}{section*.16}
+\contentsline {subsection}{Why the hell is it taking so long}{5}{section*.17}
+\contentsline {section}{\relax $\@@underline {\hbox {Thermistor Profile}}\mathsurround \z@ $\relax }{5}{section*.18}
+\contentsline {subsection}{Foreword}{5}{section*.19}
+\contentsline {subsection}{Initalization}{6}{section*.20}

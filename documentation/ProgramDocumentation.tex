@@ -1,0 +1,176 @@
+\documentclass[12pt]{article}
+\usepackage[left=1in, right=1in, top=1 in]{geometry}
+\setcounter{secnumdepth}{0}
+\usepackage[utf8]{inputenc}
+\usepackage{titling}
+\usepackage{listings}
+\usepackage[symbol]{footmisc}
+\usepackage[normalem]{ulem}
+\usepackage{multicol}
+\usepackage{fancyhdr}
+\usepackage{color,soul}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{titling}
+\usepackage{hyperref}
+
+
+\pagestyle{fancy}
+\lhead{\textit{Program Documentation}}
+\rhead{Tristan Anderson}
+
+\definecolor{YellowOrange}{RGB}{255,174,66}
+
+\pagestyle{fancy}
+\lhead{\textit{Calibration Program Documentation}}
+\rhead{Tristan Anderson}
+
+\pretitle{\begin{flushright}\bfseries}
+\posttitle{\par\end{flushright}\vskip 0.5em}
+\preauthor{\begin{flushright}}
+\postauthor{\end{flushright}}
+\predate{\par\flushright}
+\postdate{\par}
+
+\title{Calibration Program Documentation}
+\author{Tristan Anderson}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{green},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{PineGreen},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+\tableofcontents
+\thispagestyle{empty}
+\setlength{\parindent}{0pt}
+\section{A Note}
+This set of classes are to be executed with Python 3.6.7 \textbf{NOT} in python's interactive mode. I am currently implementing a GUI as of 03/27/2019, but there is no guarantee of its completion.  Two classes were made to work in tandem here, the "\textit{slifercal}" class inherits the "\textit{thermistor{\textunderscore}profile}" class, the former deals with the overall data-parsing and graphing, while the latter deals with the calibrations.  I don't really have formal training in working with large data sets. I took an introductory level python programming class in 2016 - proceed formally.
+
+\section{\underline{slifercal}}
+\subsection{Foreword}
+\underline{It is imperative}, \textbf{\textcolor{YellowOrange}{David,}} (or LabVIEW manager) to make sure the columns of the data file passed to the \textit{slifercal} class is in the proper format - so labview should be outputting a datafile in the format of something along the lines of:
+
+\begin{table}[h]
+\begin{tabular}{llllll}
+\textbf{Time (seconds or datetime\footnote{{[}MM/DD/YYYY HH:MM:SS{]}})} & \textbf{AB.M1} & \textbf{...} & \textbf{CCS.F1} & \textbf{...} & \textbf{Comments}          \\
+\textbf{3635332758.31034}           & 163.412        & \textbf{...} & 2032.2          & ...          & \textbf{ipsum lorem}       \\
+\textbf{3635332772.31121}           & 163.393        & \textbf{...} & 2035.2          & ...          & \textbf{ipsum lorem bacon}
+\end{tabular}
+\end{table}
+The program only analyzes the data underneath the headers that have "Time", "AB.", "CCS.", and "Comments" in them.
+\subsection{Initialization}
+\label{sec:slifercal}
+\begin{lstlisting}
+instance = slifercal(file_location=None):
+\end{lstlisting}
+The objective of this class was to create a persistence based thermistor calibration program using pickle for I\/O. The user can initialize the class with a data file location: \textit{file{\textunderscore}location} but providing a path to a data file is not necessary. All the class does when initialized is take whatever location provided, and store it as a self variable.
+\subsection{Loading Previous Data}
+\label{subsec:Loading Previous Data}
+\begin{lstlisting}
+slifercal.load_data(data_location=None):
+\end{lstlisting}
+This method searches for the most recent "keeper{\textunderscore}data{\textunderscore}original{\textunderscore}YYYY{\textunderscore}MM{\textunderscore}DD{\textunderscore}HHMMSS.pk" where Y, M, D, H, M, S is the year, month, day, hour, minute, and second respectively specifying the file's time of generation. One does not have to provide a file name or location so long as the name of the file remains unchanged. If one wishes to use older pickled parsed data - so be it. Simply call the method with the appropriate file location \& or name. The GUI (If implemented should  should allow you to select 
+\subsubsection{Usage}
+As the parent-title of the subsection above mentions, this method is used to load previously parsed (analyzed) data into the instance of a class. 
+\subsection{Analyze Data}
+\label{subsec:Analyze Data}
+\begin{lstlisting}
+slifercal.find_stable_regions(rangeshift=1, n_best=10)
+\end{lstlisting}
+This will read the data from the file location provided during the instance's initialization. If no file was provided, it will assume the data file is present in the directory that the class was initialized from. It will take several minutes to calculate the calibration points depending on the slice size, step size, and data-file size. The program will periodically notify the user the program's whereabouts in the parsing process. The program prints to the console every time it parses a quarter of a column. Typically in the form of:
+
+\begin{center}
+\textit{"n" of x Ranges averaged.}
+\end{center}     
+
+This method works by using Pandas to slice data from one column at a time. The program then calculates the average value within that slice of data, and calculates its standard deviation. It skips over any slice of data that contains a zero, or NaN values. This information, including the range that the slice originated from is saved, and is written to a dictionary. This dictionary of standard deviations, averages, and ranges is then written to a file, and analyzed. One of the private methods then write the dictionary with averages and ranges to a binary pickle file using cpickle.
+
+\subsection{General Plotting}
+\label{subsec:General Plotting}
+\begin{lstlisting}
+slifercal.plot_calibration_candidates(n_best=10, dpi_val=150, plotwidth=1000, plot_logbook=False, data_record=True):
+\end{lstlisting}
+Once the data has been analyzed and the top \textit{n} most stable regions of data have been saved to that pickled dictionary, the program then garbage-collects all non-critical variables to reduce memory usage.  Once the garbage is collected, it initializes the plotting process\footnote{Which should probably be turned into its own class due to object format} and begins to plot the n most stable regions.
+
+\subsection{Analysis Suite}
+\label{Analysis Suite}
+\begin{lstlisting}
+slifercal.analysis_suite(rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=False): 
+\end{lstlisting}
+This pre-built method combines two methods from sections \hyperref[subsec:General Plotting]{\textcolor{blue}{\underline{General Plotting}}} and \hyperref[subsec:Analyze Data]{\textcolor{blue}{\underline{Analyze Data}}}
+
+\subsubsection{range{\textunderscore}shift}
+Modifies how the slices of data are selected from the data file. The default is 1, which shifts the range by 1 in the \hyperref[subsec:Analysis Suite]{\textcolor{blue}{\underline{Analysis Suite}}} section above.
+
+\subsubsection{range{\textunderscore}length}
+Specifies the size of the range slice that the program takes as it is parsing the original data file.
+
+\subsection{Graphing}
+\begin{lstlisting}
+slifercal.plot_calibration_candidates(n_best=10, dpi_val=150, plotwidth=1000, plot_logbook=False, data_record=True)
+\end{lstlisting}
+It takes the n most stable\footnote{By standard deviation} regions of data that were stored in the "keeper data" dictionary, and plots the sections of data with comments that correspond to the same slice of the data.
+\begin{figure}[H]
+ \includegraphics[width=\textwidth,keepaspectratio]{graph.png}
+ \caption{Equipped with a legend, the graph displays lots of useful information in the form of highlighted text, and color-coded markings. On the upper left of the figure, range information is written, below the actual graph are comment entries from the logbook itself. On my laptop, the pdf looks awful on the page that this is printed. If you zoom to 200\% in the PDF, you should be able to read the comments, and see the graph a little more clearly.}
+\end{figure}
+
+\subsubsection{n{\textunderscore}best}
+If no "thermistor calibration points" dictionary was found during the calling of this method, the method will try to find the most recently saved pickling of the parsed data. The program will then take the \textit{n} most stable regions per thermistor per temperature range and plot them.
+
+\subsubsection{dpi{\textunderscore}val}
+Specifies the DPI resolution for the plot.  By default the plot is 32"x18". I encourage you to use a DPI of at least 150 so you can read the comments on the bottom half of the graph.
+
+\subsubsection{plotwidth}
+\textbf{The naming of this argument is misleading} This argument determines the length of \textbf{EACH} "wing" on both sides of the region of data that the program has determined as "flat". Expect a total range width of
+Plot Width $\approx 2*plotwidth+range{\textunderscore}length$
+
+\subsection{Why the hell is it taking so long}
+Pandas is a powerful library because it's backbone is Numpy arrays. They're high performance and written at the C level; \textit{however}, due to the quantity of data being parsed, this pandas is fairly slow at data slicing. The second slowest executed command in the \textit{slifercal} and \textit{thermistor{\textunderscore}profile} classes are executed on the order of 20 ms. The longest command in any loop that is not a data slice takes no more that 5 ms to execute. I promise I have tried to vectorize as much as I possibly could to make this faster.  I blame pandas.  I also don't want to rewrite this in a different language (yet).
+\section{\underline{Thermistor Profile}}
+\subsection{Foreword}
+This class is a data-structure that handles the negative temperature coefficient thermistor calibrations that are installed on the superconducting solenoid and helium evaporation refrigerator in the Dynamic Nuclear Polarization system. The ones that are tracked by this program have the functional form of:
+
+\begin{equation}
+T_{Kelvin} = a + b*\exp{(\frac{1000*c}{R_{\Omega}})}
+\end{equation}
+
+Other thermistors like Cernox, pre-calibrated Cernox, and pre-calibrated carbon ceramic thermistors are not managed by this class, therefore they will be ignored if the column labels contain exactly: "AB." and "CCS."  The \textit{curve{\textunderscore}coefficent{\textunderscore}{\textunderscore}data.csv} should never be manually edited, and should remain in the following format:
+\begin{table}[H]
+\begin{tabular}{cccccc}
+\textbf{Name}     & \textbf{AB.M1} & \textbf{...} & \textbf{CCS.F11} & \textbf{...} & \textbf{Other pre-calibrated thermistors} \\
+\textbf{a}        & 10.6901        & \textbf{...} & -2.660           & \textbf{...} & ...                                       \\
+\textbf{...}      &                & \textbf{...} & ...              & \textbf{...} & ...                                       \\
+\textbf{c}        & -28.279...     & \textbf{...} & 4.735            & \textbf{...} & ...                                       \\
+\textbf{RT}       & 142.001        & \textbf{...} & 917.6            & \textbf{...} & ...                                       \\
+\textbf{...}      & ...            & \textbf{...} & ...              & \textbf{...} & ...                                       \\
+\textbf{Methanol} &                & \textbf{...} & 1048.03          & \textbf{...} & ...                                      
+\end{tabular}
+\end{table}
+
+It is a tab delimited file. If you need to open it for any reason, do so - but again \textbf{don't manually edit this file.}
+
+\subsection{Initalization}
+\begin{lstlisting}
+from thermistor_profile import thermistor_profile
+thermistors = {thermistor_name : thermistor_profile(thermistor_name) for thermistor_name in list_of_thermistors}
+\end{lstlisting}
+This class is meant to be inherited by the slifercal class. \textcolor{YellowOrange}{\textit{Each instance of this class is, in itself a representation of the calibration profile of a particular NTC-Thermistor.}} Each instance is a column of the \textit{curve{\textunderscore}coefficent{\textunderscore}{\textunderscore}data.csv} file.
+
+\end{document}
