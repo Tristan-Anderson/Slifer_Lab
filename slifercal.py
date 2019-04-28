@@ -309,7 +309,7 @@ class slifercal(object):
         heck = {name:tp(name) for name in col_names}
         for key in heck:
             if key != "Time":
-                heck[key].update_calibration()
+                heck[key].update_calpoint()
                 
     def find_stable_regions(self, rangeshift=1, n_best=10):
         self.__readfile()
@@ -429,6 +429,7 @@ class slifercal(object):
                             else:
                                 break
                         (df_xslice,df_yslice) = (self.df["Time"][rng_start:rng_end], self.df[thermistor][rng_start:rng_end])
+                        
                         if plot_logbook:
                             ### Data selection ###
                             (range_start, range_end) = (min(df_xslice), max(df_xslice))
@@ -448,9 +449,7 @@ class slifercal(object):
                             data_record_slice = self.record_df[data_record_start_index:data_record_end_index]
                             data_record_slice = data_record_slice[data_record_slice["State"].isin([1])]
                             data_record_slice = data_record_slice[data_record_slice["Time"].isin(pandas.date_range(start=range_start,end=range_end))]
-                            #if len(data_record_slice["Time"]) == 0:
-                                #print("Rejected", thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                                #continue
+
                             ### Figure Generation ###
                             fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
                             big_fig = fig.add_subplot(111) # Canvas
@@ -478,6 +477,7 @@ class slifercal(object):
                                         xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
                                         xycoords='figure pixels')
                                 v += 1
+                            
                             v = 0
                             poi = True
                             for comment in logbook_slice["Comment"]: 
@@ -541,7 +541,7 @@ class slifercal(object):
                             graph.annotate(
                                 str(df_xslice[rng_ss]),
                                 xy=(df_xslice[rng_ss], avg+max(self.df[thermistor][rng_start:rng_end])*0.053),
-                                xycoords='data', color='red')
+                                xycoords='data', color='red') # The range-of-interest start time
                             graph.plot(
                                 (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
                                 (avg-max(self.df[thermistor][rng_start:rng_end])*0.05,avg+max(self.df[thermistor][rng_start:rng_end])*0.05),
@@ -549,7 +549,7 @@ class slifercal(object):
                             graph.annotate(
                                 str(df_xslice[rng_ee-1]),
                                 xy=(df_xslice[rng_ee-1], avg+max(self.df[thermistor][rng_start:rng_end])*0.053),
-                                xycoords='data', color='red')
+                                xycoords='data', color='red') # The range of interest end time
 
                             ### Annotations ###
                             big_fig.annotate(
@@ -573,11 +573,8 @@ class slifercal(object):
 
                             ### Save Plot ###
                             graph.legend(loc='best')
-                            if milimeter_waves == True:	
-                            	plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-                            	print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-                            elif milimeter_waves == False:
-                                print("Skipped "+thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                            plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
+                            print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
                             plt.close('all')
                             plt.clf()
                     gc.collect() # You will run out of memory if you do not do this.

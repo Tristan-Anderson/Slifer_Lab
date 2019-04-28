@@ -1,5 +1,5 @@
 import _pickle as pickle
-import pandas, traceback, datetime, time, numpy
+import pandas, traceback, datetime, time, numpy, os, glob
 import matplotlib
 import scipy
 from scipy import optimize, stats
@@ -15,22 +15,22 @@ def function(r,a,b,c):
     return a+b*numpy.exp(c*(1000/r))
 
 class thermistor_profile(object):
-	###############################################################
-	"""
-	   This class was created as a tool to better handle and
-	      manipulate thermometry calibrations. It takes a
-	   mise-en plas approach requiring a single file to operate.
-	      The file it requires is a simple .csv that stores
-	     calibration coefficents, and initial points that this
-	        program uses to find the coefficents of the ntc 
-	   						thermistor curve 
-										                        """
-	###############################################################
-    def __init__(self, columnname, profile=None, changelog=None):
+    ###############################################################
+    """
+       This class was created as a tool to better handle and
+          manipulate thermometry calibrations. It takes a
+       mise-en plas approach requiring a single file to operate.
+          The file it requires is a simple .csv that stores
+         calibration coefficents, and initial points that this
+            program uses to find the coefficents of the ntc 
+                            thermistor curve 
+                                                                """
+    ###############################################################
+    def __init__(self, name, profile=None, changelog=None):
         self.droppit = ['a', 'b', 'c']
         self.profile_path = profile
         self.changelog_path = changelog
-        self.columnname = columnname
+        self.name = name
         self.pointlabels = []
         self.datapoints = 0
 
@@ -70,36 +70,46 @@ class thermistor_profile(object):
         elif len(self.datapoints) == 4:
             return numpy.array([290, 175.5, 77.36, 4.2])
         else:
-            raise Ydata_Not_Found(self.columnname)
+            raise Ydata_Not_Found(self.name)
 
     def __logbook_entry(self, message):
-    	####################################
-    	"""
-    									 """
-    	####################################
+        ####################################
+        """
+                                         """
+        ####################################
         self.__load_changelog(do_print=False)
         entry = pandas.DataFrame({"Timestamp":datetime.datetime.now().strftime("%Y/%m/%d/ %H:%M:%S"),
-            "Name":self.columnname, "Comment":message}, columns=["Timestamp", "Name", "Comment"], index=[1,2,3])
+            "Name":self.name, "Comment":message}, columns=["Timestamp", "Name", "Comment"], index=[1,2,3])
         self.changelog = self.changelog.append(entry, ignore_index=True)
         self.write_changelog()
 
-    def __update_calpoint(self,value, calpoint):
+    def __execute_instructions(self, instructions):
         self.__load_coefficents(do_print=False)
-        if self.columnname in self.profile_columns:
-            self.profile.loc[calpoint, self.columnname] = value
+        for instruction in instructions:
+            temp = instruction[0]
+            cut = instruction[1]
+            self.profile.loc[temp, self.name] = self.__get_avg(cut)
+    
+    def update_calpoint(self, value=None, calpoint=None):
+        instructions = []
+        for file in os.listdir():
+            if file.endswith(".png"):
+                if file.split("_")[0] == self.name:
+                    instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
+        print(instructions)
+        self.__execute_instructions(instructions)
 
-    def __unpack_package(self):
-    	for instruction in self.package:
-    		print(instruction)
 
-    def update_calibration(self, package):
-    	self.package = package
-    	self.__unpack_package()
-  
+        self.__load_coefficents(do_print=False)
+
+        if self.name in self.profile_columns:
+            self.profile.loc[calpoint, self.name] = value
+
+
     def plot_calibration(self):
         self.__load_coefficents(do_print=False)
-        if self.columnname in self.profile.columns.values:
-            self.datapoints = self.profile.loc[self.profile.index.values, self.columnname].sort_values()
+        if self.name in self.profile.columns.values:
+            self.datapoints = self.profile.loc[self.profile.index.values, self.name].sort_values()
             self.datapoints = self.datapoints.dropna()
             self.datapoints = self.datapoints.drop(self.droppit)
             rows = self.datapoints.index.values
@@ -107,9 +117,9 @@ class thermistor_profile(object):
             popt, pconv = optimize.curve_fit(function, self.datapoints, self.__available_thermistor_temperatures())
             coeff = popt[0:3]
             (a,b,c) = coeff
-            if "AB" in self.columnname:
+            if "AB" in self.name:
                 xdata = sorted([i for i in range(120,3000)],reverse=True)
-            if "CCS" in self.columnname:
+            if "CCS" in self.name:
                 xdata = sorted([i for i in range(875,4500)],reverse=True)
             ydata = []
             for i in xdata:
@@ -120,7 +130,7 @@ class thermistor_profile(object):
             graph=figure.add_subplot(111)
             graph.plot(self.datapoints, self.__available_thermistor_temperatures(), 'ro',label="Initial Points")
             graph.plot(xdata,ydata, label="Curve", color="blue")
-            graph.set_title(self.columnname)
+            graph.set_title(self.name)
             graph.set_xlabel("Resistance (Ohms)")
             graph.set_ylabel("Temperature (Kelvin)")
             graph.legend(loc="best")
@@ -140,15 +150,15 @@ class thermistor_profile(object):
                 chsq = scipy.stats.chisquare(self.__available_thermistor_temperatures(), f_exp=chi_expected)
                 print(chsq)
                 graph.annotate("One-way Chisquared: p = "+str(chsq[1]), xy=(2*dpi,5.25*dpi), xycoords='figure pixels')
-            plt.savefig(self.columnname+".png")
+            plt.savefig(self.name+".png")
             plt.close('all')
             plt.clf()
         
 
 class Ydata_Not_Found(Exception):
     # If you have data that you are including in the calibration, make sure it has a matching 
-    def __init__(self, datapoints, columnname):
-        self.message = "###Number of calibration points ("+str(len(datapoints))+") used to calibrate "+columnname+"\n\
+    def __init__(self, datapoints, name):
+        self.message = "###Number of calibration points ("+str(len(datapoints))+") used to calibrate "+name+"\n\
         does not have existing temperature list. See line 54, of thermistor_profile.py to add another temperature \"profile\""
         self.expression = None
 
