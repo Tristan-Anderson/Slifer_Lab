@@ -19,6 +19,7 @@ Currently a scaffolding has been constructed - but nothing really more than that
 			(DONE) Parse file names.
 			(DONE) If parsed file name matches thermistor corresponding to thermistor profile instance - keep that parsed information.
 			(DONE) Locate where in curve_coefficent_data.csv are points to be replaced
-			(IN PROGRESS) Execute based on that above information
+			(DONE) Execute based on that above information
+			- ADD shell thermometry to curve_coefficent_data.csv
 			- WRITE TO LOGFILE.
 

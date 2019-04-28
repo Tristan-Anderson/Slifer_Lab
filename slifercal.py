@@ -60,7 +60,7 @@ class slifercal(object):
         def_name = text[:text.find('=')].strip()
         self.name = def_name
 
-    def __readfile(self):
+    def __read_data(self):
         if self.datafile_location == None:
             print(
                 "No datafile was used to initalize the instance!\
@@ -301,23 +301,25 @@ class slifercal(object):
         return min(iterable, key=lambda x: abs(x - test_val))
 
     def return_dfs(self):
+        thermistors = {}
         self.load_data()
-        self.__keeper_data_cleaner(do_i_print=False)
-        self.__readfile()
+        self.__read_data()
         self.__cleandf()
-        col_names = self.df.columns.values
-        heck = {name:tp(name) for name in col_names}
-        for key in heck:
+
+        for name in self.df.columns.values:
+            if name != "Time":
+                thermistors[name] = tp(name, self.keeper_data[name])
+        for key in thermistors:
             if key != "Time":
-                heck[key].update_calpoint()
+                thermistors[key].auto_update_calpoint()
                 
     def find_stable_regions(self, rangeshift=1, n_best=10):
-        self.__readfile()
+        self.__read_data()
         self.__cleandf()
         self.__range_election(rangeshift=rangeshift)
 
     def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
-        self.__readfile()
+        self.__read_data()
         self.__cleandf()
         self.__range_election(rangeshift=rangeshift, range_length=range_length)
         self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
@@ -381,7 +383,7 @@ class slifercal(object):
             k = self.logbook_entries
         except AttributeError:
             del k
-            self.__readfile()
+            self.__read_data()
             self.__save_top_n_ranges(n=n_best)
         ### If you want to plot the logbook. Load the logbook. ###
         if plot_logbook:

@@ -1,9 +1,7 @@
-import _pickle as pickle
-import pandas, traceback, datetime, time, numpy, os, glob
-import matplotlib
-import scipy
+import pandas, traceback, datetime, time, numpy, os, glob, matplotlib, scipy, pprint
 from scipy import optimize, stats
 from matplotlib import pyplot as plt
+import _pickle as pickle
 
 """
 USE CAUTION WITH AB.F6. THE PREVIOUS THERMISTOR BROKE SO
@@ -26,13 +24,19 @@ class thermistor_profile(object):
                             thermistor curve 
                                                                 """
     ###############################################################
-    def __init__(self, name, profile=None, changelog=None):
+    def __init__(self, name, keeper_dict, profile=None, changelog=None):
+        self.parsed_slice = keeper_dict
         self.droppit = ['a', 'b', 'c']
         self.profile_path = profile
         self.changelog_path = changelog
         self.name = name
         self.pointlabels = []
         self.datapoints = 0
+
+    def __debug_attribute(self, obj):
+        with open("debug.txt", 'w') as fout:
+            pprint.pprint(obj, fout)
+        print("Printed object to file: debug.txt")
 
     def __load_coefficents(self, do_print=True):
         if self.profile_path == None:
@@ -84,23 +88,30 @@ class thermistor_profile(object):
         self.write_changelog()
 
     def __execute_instructions(self, instructions):
-        self.__load_coefficents(do_print=False)
+        self.__load_coefficents(do_print=False)  
+        # We need to also load the keeper_data dict from slifercal
+        # Without abusing small-RAM systems.
+        # So we will take the slice of keeper_data that pertains to instance name
+        # This will create two copies of the parsed data.
+        
         for instruction in instructions:
+
             temp = instruction[0]
-            cut = instruction[1]
-            self.profile.loc[temp, self.name] = self.__get_avg(cut)
+            cut = int(instruction[1])
+            self.__debug_attribute(self.parsed_slice)
+            print(self.name, cut, temp, "Before", self.profile.loc[temp, self.name])
+            self.profile.loc[temp, self.name] = self.parsed_slice[temp][cut][1]
+            print("After", self.profile.loc[temp, self.name])
     
-    def update_calpoint(self, value=None, calpoint=None):
+    def auto_update_calpoint(self, value=None, calpoint=None):
         instructions = []
         for file in os.listdir():
             if file.endswith(".png"):
                 if file.split("_")[0] == self.name:
-                    instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
+                    if self.name in self.profile_columns:
+                        instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
         print(instructions)
         self.__execute_instructions(instructions)
-
-
-        self.__load_coefficents(do_print=False)
 
         if self.name in self.profile_columns:
             self.profile.loc[calpoint, self.name] = value
