@@ -308,10 +308,16 @@ class slifercal(object):
 
         for name in self.df.columns.values:
             if name != "Time":
-                thermistors[name] = tp(name, self.keeper_data[name])
+                thermistors[name] = tp(name, self.keeper_data_name)
         for key in thermistors:
             if key != "Time":
-                thermistors[key].auto_update_calpoint()
+                thermistors[key].auto_update_calpoint(self.keeper_data[name])
+
+    def complete(self, rangeshift=1, n_best=1, range_length=None, dpi_val=50, logbook=True):
+        self.__read_data()
+        self.__cleandf()
+        self.__range_election(rangeshift=rangeshift, range_length=range_length)
+        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
                 
     def find_stable_regions(self, rangeshift=1, n_best=10):
         self.__read_data()

@@ -24,8 +24,8 @@ class thermistor_profile(object):
                             thermistor curve 
                                                                 """
     ###############################################################
-    def __init__(self, name, keeper_dict, profile=None, changelog=None):
-        self.parsed_slice = keeper_dict
+    def __init__(self, name, parsed_path, profile=None, changelog=None):
+        self.parsed_path = parsed_path
         self.droppit = ['a', 'b', 'c']
         self.profile_path = profile
         self.changelog_path = changelog
@@ -48,7 +48,6 @@ class thermistor_profile(object):
         with open(self.profile_path, 'r') as f:
             self.profile = pandas.read_csv(f, sep='\t')
         self.profile = self.profile.set_index("Name")
-        self.profile_columns = self.profile.columns.values
 
     def __load_changelog(self, do_print=True):
         if self.changelog_path == None:
@@ -64,9 +63,9 @@ class thermistor_profile(object):
         with open("thermometry_changelog.csv", 'w') as f:
             self.profile.to_csv(f, sep='\t', index=False)
 
-    def write_changelog(self):
-        with open(self.changelog_path, 'w') as f:
-            self.changelog.to_csv(f,sep='\t', index=False)
+    def write_changelog(self, message):
+        with open(self.changelog_path, 'a') as f:
+            f.write(str(datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")[:-3])+'\t'+str(self.name), str(message))
 
     def __available_thermistor_temperatures(self):
         if len(self.datapoints) == 3:
@@ -87,34 +86,42 @@ class thermistor_profile(object):
         self.changelog = self.changelog.append(entry, ignore_index=True)
         self.write_changelog()
 
-    def __execute_instructions(self, instructions):
+    def __execute_instructions(self, instructions, parsed_slice):
         self.__load_coefficents(do_print=False)  
         # We need to also load the keeper_data dict from slifercal
         # Without abusing small-RAM systems.
         # So we will take the slice of keeper_data that pertains to instance name
         # This will create two copies of the parsed data.
+
+        # We only want this to be in memory and NOT an attribute to the instance due to pass-by-object
+        # Extra object container that it creates.
         
         for instruction in instructions:
-
             temp = instruction[0]
             cut = int(instruction[1])
-            self.__debug_attribute(self.parsed_slice)
-            print(self.name, cut, temp, "Before", self.profile.loc[temp, self.name])
-            self.profile.loc[temp, self.name] = self.parsed_slice[temp][cut][1]
-            print("After", self.profile.loc[temp, self.name])
+            self.__debug_attribute(parsed_slice)
+            before = self.profile.loc[temp, self.name]
+            self.__debug_attribute(parsed_slice)
+            print(self.name, temp, cut)
+            try:
+                after = parsed_slice[temp][cut]
+            except KeyError:
+                print(cut,"th region undefined. Are you sure that keeper_data.csv corresponds to the graphs in the directory?")
+                continue
+            self.profile.loc[temp, self.name] = after
+            self.write_changelog("Changed "+self.name+" "+str(temp)+"_Calpoint From_"+str(before)+"_To_"+str(after) + "From")
+
     
-    def auto_update_calpoint(self, value=None, calpoint=None):
+    def auto_update_calpoint(self, parsed_slice):
         instructions = []
+        self.__load_coefficents(do_print=False)  
         for file in os.listdir():
             if file.endswith(".png"):
                 if file.split("_")[0] == self.name:
-                    if self.name in self.profile_columns:
+                    if self.name in self.profile.columns.values:
                         instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
-        print(instructions)
-        self.__execute_instructions(instructions)
+        self.__execute_instructions(instructions, parsed_slice)
 
-        if self.name in self.profile_columns:
-            self.profile.loc[calpoint, self.name] = value
 
 
     def plot_calibration(self):
