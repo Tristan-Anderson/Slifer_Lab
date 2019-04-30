@@ -60,15 +60,11 @@ class slifercal(object):
         def_name = text[:text.find('=')].strip()
         self.name = def_name
 
-    def __read_data(self):
-        if self.datafile_location == None:
-            print(
-                "No datafile was used to initalize the instance!\
-                \nAssuming filename is \"data.csv\"")
-            self.datafile_location = "data.csv"
-        with open(self.datafile_location,'r') as f:
-            self.df = pandas.read_csv(f)
-        print("File loaded.")
+    def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
+        self.__read_data()
+        self.__cleandf()
+        self.__range_election(rangeshift=rangeshift, range_length=range_length)
+        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
 
     def __cleandf(self):
         #############################################
@@ -99,54 +95,153 @@ class slifercal(object):
                 if name != 'Time' and name not in column:
                     self.df.drop(columns=name)
 
-    def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
-        self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
-        return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
+    def complete(self, rangeshift=1, n_best=3, range_length=None, dpi_val=50, logbook=True):
+        self.__read_data()
+        self.__cleandf()
+        self.__range_election(rangeshift=rangeshift, range_length=range_length)
+        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
+        for name in self.df.columns.values:
+            if name != "Time":
+                thermistors[name] = tp(name, self.keeper_data_name)
+        for key in thermistors:
+            if key != "Time":
+                thermistors[key].auto_update_calpoint(self.keeper_data[name])
 
-    def __time_steps_suck(self):
-        ###################################
-        """
-           This will find the average
-           timestep in between the first
-           10 datapoints, and use that 
-           to search "Hour long slices" 
-                   of the data.
-                                        """
-        ###################################
-        df_times = []
-        diff_times = []
-        if type(self.df["Time"][1]) == str:
-            for i in range(1,10):
-                ent = dateutil.parser.parse(self.df["Time"][i+1])-dateutil.parser.parse(self.df["Time"][i])
-                df_times.append(ent.total_seconds())
-            self.average_timestep = numpy.mean(df_times)
-        elif type(self.df["Time"][1]) == numpy.float64:
-            for i in range(1, 10):
-                df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
-            self.average_timestep = numpy.mean(df_times)
+    def find_stable_regions(self, rangeshift=1):
+        self.__read_data()
+        self.__cleandf()
+        self.__range_election(rangeshift=rangeshift)
 
-    def __save_top_n_ranges(self, n=10):
-        ########################################
+    def __keeper_data_cleaner(self, do_i_print=True):
+        #######################################
         """
-           This is the self.keeper_data parser 
-           that sorts through self.keeper_data
-           and creates a new dictionary con-
-           taining the n most stable regions 
-                           of data.
-                                              """
-        #########################################
+            This is a less robust version of 
+                self.__save_top_n_ranges()
+                                            """
+        #######################################
         print("Parsing data...")
         self.thermistor_calibration_points = {}
         for thermistor in self.keeper_data:
+            for temprange in self.keeper_data[thermistor]:
+                for row in self.keeper_data[thermistor][temprange].itertuples():
+                    print(row["STD"])
+        exit()
+        for thermistor in self.keeper_data:
             calibration_list = {}
-            print(thermistor)
-            try:
-                calibration_list[temperature]= dict(zip(slice_number, data))
-            except:
-                print("No Calibration point present for", thermistor, "in", temperature, " range.")
-                continue
-            print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
+            for temperature in self.keeper_data[thermistor]:
+                min_std = 50
+                slice_numbers = 0
+                for nth_range in self.keeper_data[thermistor][temperature]:
+                    std = self.keeper_data[thermistor][temperature][nth_range][0]
+                    if min_std > std:
+                        min_std = std
+                        slice_number = nth_range
+                try:
+                    calibration_list[temperature] = [
+                        min_std, 
+                        self.keeper_data[thermistor][temperature][slice_numbers][1], 
+                        self.keeper_data[thermistor][temperature][slice_numbers][2]]
+                except:
+                    if do_i_print:
+                        print("No Calibration point present for", thermistor, "in", temperature, " range.")
+                        continue
+                if do_i_print:        
+                    print("Located flattest", temperature, 
+                          "datapoint for thermistor:", thermistor)
             self.thermistor_calibration_points[thermistor] = calibration_list
+        if do_i_print:
+            t = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            with open('thermistor_calibration_points_'+t+'.pk', 'wb') as handle:
+                pickle.dump(self.thermistor_calibration_points, handle)
+            print("Dictionary pickled as:", 'thermistor_calibration_points_'+t+'.pk')
+
+    def load_data(self, file_location=None):
+        ###################################################
+        """
+           This can be used in many modes, but it really
+           was made with the intent of persistance. The
+             user would load their pickled keeper_data 
+             in a live version of python3 and call the
+           plot_calibration_candidates method to make a
+           bunch of graphs based on the data loaded into
+                   the instance from this method.
+                                                        """
+        ###################################################
+
+        if file_location == None:
+            print("No file path provided. Finding most recent pickle...")
+            list_of_files = []
+            desired_file = ""
+            big_date = 0
+            for file in os.listdir(os.getcwd()):
+                if file.endswith(".pk") and "keeper" in file:
+                    list_of_files.append(file)
+                    date = int("".join(list(file)[-17:-3]))
+                    if date > big_date:
+                        big_date = int(date)
+            big_date = str(big_date)
+            for file in list_of_files:
+                if big_date in file:
+                    self.keeper_data_name = file
+            print("Pickle found.  Reading file...")
+            with open(self.keeper_data_name, 'rb') as fin:
+                self.keeper_data = pickle.load(fin)
+            print("File Read")
+            self.__keeper_data_cleaner()
+        elif file_location != None:
+            self.keeper_data_name = file_location
+            print("Reading file")
+            with open(file_location, 'rb') as fin:
+                self.keeper_data = pickle.load(fin)
+            print("File read")
+            self.__keeper_data_cleaner(False)
+
+    def __load_data_record(self):
+        if self.data_record_datafile_location == None:
+            print("No loogbook was used to initalize the instance!\nAssuming filename is \"data_record.csv\"")
+            self.data_record_datafile_location = "data_record.csv"
+        with open(self.data_record_datafile_location,'r') as f:
+            self.record_df = pandas.read_csv(f, sep='\t')
+        self.record_df["Time"] = pandas.to_datetime(self.record_df['Time'])
+        print("Data Record loaded.")
+
+    def __load_logbook(self):
+        if self.logbook_datafile_location == None:
+            print("No loogbook was used to initalize the instance!\nAssuming filename is \"logbook_data.csv\"")
+            self.logbook_datafile_location = "logbook_data.csv"
+        with open(self.logbook_datafile_location,'r') as f:
+            self.logbook_df = pandas.read_csv(f, sep='\t')
+        self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
+        print("Data Record File loaded.")
+
+
+    def __nearest(self, test_val, iterable): # In an interable data-structure, find the nearest to the value presented.
+        return min(iterable, key=lambda x: abs(x - test_val))
+
+    def __range_election(self, rangeshift=1, range_length=None):
+        #############################################################
+        """
+           This is the 'brawns' of the program. This method slices
+           data in self.df, skips the slice if there are any zero 
+           vals the the slice. Then takes the files average, std,
+           and assigns it a "Temperature range" based on ballpark
+                       estimates found in the function:
+                      what_temperature_range_are_we_in()
+                                                                  """
+        #############################################################
+        if range_length == None:
+            print("No range length given. Making range length one hour long.")
+            self.__time_steps_suck()
+            self.range_end = int(3600/self.average_timestep)
+        else:
+            self.range_end = range_length
+        self.keeper_data = {}
+        for column_name in self.df: # Thermistor
+            self.__range_election_metric(column_name, rangeshift)
+        self.time_for_range_election_pickle = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        with open('keeper_data_original_'+self.time_for_range_election_pickle+'.pk', 'wb') as handle:
+            pickle.dump(self.keeper_data, handle)
+        print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
 
     def __range_election_metric(self,column_name, rangeshift):
         temp_RT_dict = {}
@@ -191,51 +286,15 @@ class slifercal(object):
             return True
         return False
 
-    def __range_election(self, rangeshift=1, range_length=None):
-        #############################################################
-        """
-           This is the 'brawns' of the program. This method slices
-           data in self.df, skips the slice if there are any zero 
-           vals the the slice. Then takes the files average, std,
-           and assigns it a "Temperature range" based on ballpark
-                       estimates found in the function:
-                      what_temperature_range_are_we_in()
-                                                                  """
-        #############################################################
-        if range_length == None:
-            print("No range length given. Making range length one hour long.")
-            self.__time_steps_suck()
-            self.range_end = int(3600/self.average_timestep)
-        else:
-            self.range_end = range_length
-        self.keeper_data = {}
-        for column_name in self.df: # Thermistor
-            self.__range_election_metric(column_name, rangeshift)
-        self.time_for_range_election_pickle = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        with open('keeper_data_original_'+self.time_for_range_election_pickle+'.pk', 'wb') as handle:
-            pickle.dump(self.keeper_data, handle)
-        print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
-
-    def __load_logbook(self):
-        if self.logbook_datafile_location == None:
-            print("No loogbook was used to initalize the instance!\nAssuming filename is \"logbook_data.csv\"")
-            self.logbook_datafile_location = "logbook_data.csv"
-        with open(self.logbook_datafile_location,'r') as f:
-            self.logbook_df = pandas.read_csv(f, sep='\t')
-        self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
-        print("Data Record File loaded.")
-
-    def __load_data_record(self):
-        if self.data_record_datafile_location == None:
-            print("No loogbook was used to initalize the instance!\nAssuming filename is \"data_record.csv\"")
-            self.data_record_datafile_location = "data_record.csv"
-        with open(self.data_record_datafile_location,'r') as f:
-            self.record_df = pandas.read_csv(f, sep='\t')
-        self.record_df["Time"] = pandas.to_datetime(self.record_df['Time'])
-        print("Data Record loaded.")
-
-    def __nearest(self, test_val, iterable): # In an interable data-structure, find the nearest to the value presented.
-        return min(iterable, key=lambda x: abs(x - test_val))
+    def __read_data(self):
+        if self.datafile_location == None:
+            print(
+                "No datafile was used to initalize the instance!\
+                \nAssuming filename is \"data.csv\"")
+            self.datafile_location = "data.csv"
+        with open(self.datafile_location,'r') as f:
+            self.df = pandas.read_csv(f)
+        print("File loaded.")
 
     def return_dfs(self):
         thermistors = {}
@@ -250,73 +309,55 @@ class slifercal(object):
             if key != "Time":
                 thermistors[key].auto_update_calpoint(self.keeper_data[name])
 
-    def complete(self, rangeshift=1, n_best=3, range_length=None, dpi_val=50, logbook=True):
-        self.__read_data()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift, range_length=range_length)
-        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
-        for name in self.df.columns.values:
-            if name != "Time":
-                thermistors[name] = tp(name, self.keeper_data_name)
-        for key in thermistors:
-            if key != "Time":
-                thermistors[key].auto_update_calpoint(self.keeper_data[name])
-                
-    def find_stable_regions(self, rangeshift=1):
-        self.__read_data()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift)
-
-    def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
-        self.__read_data()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift, range_length=range_length)
-        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
-
-    def plotting(self, rangeshift=1, nbest=3, range_length=None, dpi_val=150, logbook=True):
-        self.load_data()
-        self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
-
-    def load_data(self, file_location=None):
-        ###################################################
+    def __save_top_n_ranges(self, n=10):
+        ########################################
         """
-           This can be used in many modes, but it really
-           was made with the intent of persistance. The
-             user would load their pickled keeper_data 
-             in a live version of python3 and call the
-           plot_calibration_candidates method to make a
-           bunch of graphs based on the data loaded into
-                   the instance from this method.
-                                                        """
-        ###################################################
+           This is the self.keeper_data parser 
+           that sorts through self.keeper_data
+           and creates a new dictionary con-
+           taining the n most stable regions 
+                           of data.
+                                              """
+        #########################################
+        print("Parsing data...")
+        self.thermistor_calibration_points = {}
+        for thermistor in self.keeper_data:
+            calibration_list = {}
+            print(thermistor)
+            try:
+                calibration_list[temperature]= dict(zip(slice_number, data))
+            except:
+                print("No Calibration point present for", thermistor, "in", temperature, " range.")
+                continue
+            print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
+            self.thermistor_calibration_points[thermistor] = calibration_list
 
-        if file_location == None:
-            print("No file path provided. Finding most recent pickle...")
-            list_of_files = []
-            desired_file = ""
-            big_date = 0
-            for file in os.listdir(os.getcwd()):
-                if file.endswith(".pk") and "keeper" in file:
-                    list_of_files.append(file)
-                    date = int("".join(list(file)[-17:-3]))
-                    if date > big_date:
-                        big_date = int(date)
-            big_date = str(big_date)
-            for file in list_of_files:
-                if big_date in file:
-                    self.keeper_data_name = file
-            print("Pickle found.  Reading file...")
-            with open(self.keeper_data_name, 'rb') as fin:
-                self.keeper_data = pickle.load(fin)
-            print("File Read")
-            #self.__keeper_data_cleaner(False)
-        elif file_location != None:
-            self.keeper_data_name = file_location
-            print("Reading file")
-            with open(file_location, 'rb') as fin:
-                self.keeper_data = pickle.load(fin)
-            print("File read")
-            self.__keeper_data_cleaner(False)
+    def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
+        self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
+        return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
+
+    def __time_steps_suck(self):
+        ###################################
+        """
+           This will find the average
+           timestep in between the first
+           10 datapoints, and use that 
+           to search "Hour long slices" 
+                   of the data.
+                                        """
+        ###################################
+        df_times = []
+        diff_times = []
+        if type(self.df["Time"][1]) == str:
+            for i in range(1,10):
+                ent = dateutil.parser.parse(self.df["Time"][i+1])-dateutil.parser.parse(self.df["Time"][i])
+                df_times.append(ent.total_seconds())
+            self.average_timestep = numpy.mean(df_times)
+        elif type(self.df["Time"][1]) == numpy.float64:
+            for i in range(1, 10):
+                df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
+            self.average_timestep = numpy.mean(df_times)
+                
 
     def plot_calibration_candidates(self, n_best=10, dpi_val=150, plotwidth=1000, plot_logbook=False, data_record=True):
         #################################################################################
@@ -534,4 +575,8 @@ class slifercal(object):
                             plt.close('all')
                             plt.clf()
                     gc.collect() # You will run out of memory if you do not do this.
+
+    def plotting(self, rangeshift=1, nbest=3, range_length=None, dpi_val=150, logbook=True):
+        self.load_data()
+        self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
 
