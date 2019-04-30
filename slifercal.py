@@ -139,37 +139,13 @@ class slifercal(object):
         self.thermistor_calibration_points = {}
         for thermistor in self.keeper_data:
             calibration_list = {}
-            for temperature in self.keeper_data[thermistor]:
-                min_std = []
-                slice_number = []
-                data = []
-                for nth_range in self.keeper_data[thermistor][temperature]:
-                    std = self.keeper_data[thermistor][temperature][nth_range][0]
-                    avg = self.keeper_data[thermistor][temperature][nth_range][1]
-                    rng = self.keeper_data[thermistor][temperature][nth_range][2]
-                    try:
-                        if max(min_std) > std:
-                            min_std.append(std)
-                            slice_number.append(nth_range)
-                            data.append([std,avg,rng])
-                    except ValueError:
-                        min_std.append(std)
-                        slice_number.append(nth_range)
-                        data.append([std,avg,rng])
-                    if len(min_std) > n:
-                        last_max = max(min_std)
-                        for i in range(0, len(min_std)):
-                            if last_max == min_std[i]:
-                                del min_std[i]
-                                del slice_number[i]
-                                del data[i]
-                                break
-                try:
-                    calibration_list[temperature]= dict(zip(slice_number, data))
-                except:
-                    print("No Calibration point present for", thermistor, "in", temperature, " range.")
-                    continue
-                print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
+            print(thermistor)
+            try:
+                calibration_list[temperature]= dict(zip(slice_number, data))
+            except:
+                print("No Calibration point present for", thermistor, "in", temperature, " range.")
+                continue
+            print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
             self.thermistor_calibration_points[thermistor] = calibration_list
 
     def __range_election_metric(self,column_name, rangeshift):
@@ -192,12 +168,11 @@ class slifercal(object):
                         what_shift_is_this, "of",
                         int((len(self.df[column_name])-self.range_end)/rangeshift),
                         "Ranges averaged.")
-                df_range =[range_begin,range_end]
                 data_slice = self.df[column_name][range_begin:range_end]
                 if not data_slice.isnull().values.any(): # If there are no zeros in the range, average the range
                     avg = numpy.average(data_slice) # If the range is within what we are looking for 
                     std = numpy.std(data_slice)
-                    nth_datarange=[std, avg, df_range] # Save some stuff about it
+                    nth_datarange=[std, avg, range_begin,range_end] # Save some stuff about it
                     temperature_range = what_temperature_range_are_we_in(avg,column_name) # Make another index for the following dataset
                     if temperature_range == 0:
                         temp_RT_dict[nth_range] = nth_datarange
@@ -210,9 +185,9 @@ class slifercal(object):
                 range_begin += rangeshift
                 what_shift_is_this += 1
             self.keeper_data[column_name] = {
-                "RT":temp_RT_dict, "LN2":temp_LN2_dict,
-                "LHe":temp_LHe_dict} # Save data on thermistor; continue
-            print("Completed", column_name+"\'s analysis")
+                "RT":pandas.DataFrame.from_dict(temp_RT_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"]),
+                "LN2":pandas.DataFrame.from_dict(temp_LN2_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"]),
+                "LHe":pandas.DataFrame.from_dict(temp_LHe_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])} # Save data on thermistor; continue
             return True
         return False
 
@@ -240,44 +215,6 @@ class slifercal(object):
         with open('keeper_data_original_'+self.time_for_range_election_pickle+'.pk', 'wb') as handle:
             pickle.dump(self.keeper_data, handle)
         print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
-
-    def __keeper_data_cleaner(self, do_i_print=True):
-        #######################################
-        """
-            This is a less robust version of 
-                self.__save_top_n_ranges()
-                                            """
-        #######################################
-        print("Parsing data...")
-        self.thermistor_calibration_points = {}
-        for thermistor in self.keeper_data:
-            calibration_list = {}
-            for temperature in self.keeper_data[thermistor]:
-                min_std = 50
-                slice_numbers = 0
-                for nth_range in self.keeper_data[thermistor][temperature]:
-                    std = self.keeper_data[thermistor][temperature][nth_range][0]
-                    if min_std > std:
-                        min_std = std
-                        slice_number = nth_range
-                try:
-                    calibration_list[temperature] = [
-                        min_std, 
-                        self.keeper_data[thermistor][temperature][slice_numbers][1], 
-                        self.keeper_data[thermistor][temperature][slice_numbers][2]]
-                except:
-                    if do_i_print:
-                        print("No Calibration point present for", thermistor, "in", temperature, " range.")
-                        continue
-                if do_i_print:        
-                    print("Located flattest", temperature, 
-                          "datapoint for thermistor:", thermistor)
-            self.thermistor_calibration_points[thermistor] = calibration_list
-        if do_i_print:
-            t = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-            with open('thermistor_calibration_points_'+t+'.pk', 'wb') as handle:
-                pickle.dump(self.thermistor_calibration_points, handle)
-            print("Dictionary pickled as:", 'thermistor_calibration_points_'+t+'.pk')
 
     def __load_logbook(self):
         if self.logbook_datafile_location == None:
@@ -325,7 +262,7 @@ class slifercal(object):
             if key != "Time":
                 thermistors[key].auto_update_calpoint(self.keeper_data[name])
                 
-    def find_stable_regions(self, rangeshift=1, n_best=10):
+    def find_stable_regions(self, rangeshift=1):
         self.__read_data()
         self.__cleandf()
         self.__range_election(rangeshift=rangeshift)
@@ -335,6 +272,10 @@ class slifercal(object):
         self.__cleandf()
         self.__range_election(rangeshift=rangeshift, range_length=range_length)
         self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
+
+    def plotting(self, rangeshift=1, nbest=3, range_length=None, dpi_val=150, logbook=True):
+        self.load_data()
+        self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
 
     def load_data(self, file_location=None):
         ###################################################
@@ -368,7 +309,7 @@ class slifercal(object):
             with open(self.keeper_data_name, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
             print("File Read")
-            self.__keeper_data_cleaner(False)
+            #self.__keeper_data_cleaner(False)
         elif file_location != None:
             self.keeper_data_name = file_location
             print("Reading file")
