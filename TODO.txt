@@ -23,3 +23,9 @@ Currently a scaffolding has been constructed - but nothing really more than that
 			- ADD shell thermometry to curve_coefficent_data.csv
 			- WRITE TO LOGFILE.
 
+TUE April 30, 2019
+	Slifer Cal:
+		keyword_highlighter(keywords)
+			- Pass function a list of keywords
+			- Uses plotting module to plot the information surrounding those keywords.
+		
