@@ -364,6 +364,7 @@ class slifercal(object):
             print("File Read")
             self.__keeper_data_cleaner(False)
         elif file_location != None:
+            self.keeper_data_name = file_location
             print("Reading file")
             with open(file_location, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
