@@ -24,7 +24,7 @@ class thermistor_profile(object):
                             thermistor curve 
                                                                 """
     ###############################################################
-    def __init__(self, name, parsed_path, profile=None, changelog=None):
+    def __init__(self, name, parsed_path, profile=None, changelog="thermometry_changelog.csv"):
         self.parsed_path = parsed_path
         self.droppit = ['a', 'b', 'c']
         self.profile_path = profile
@@ -65,7 +65,7 @@ class thermistor_profile(object):
 
     def write_changelog(self, message):
         with open(self.changelog_path, 'a') as f:
-            f.write(str(datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")[:-3])+'\t'+str(self.name), str(message))
+            f.write(str(datetime.datetime.now().strftime("%Y/%m/%d %H:%M:%S.%f")[:-3])+'\t'+str(self.name)+'\t'+str(message))
 
     def __available_thermistor_temperatures(self):
         if len(self.datapoints) == 3:
@@ -95,21 +95,18 @@ class thermistor_profile(object):
 
         # We only want this to be in memory and NOT an attribute to the instance due to pass-by-object
         # Extra object container that it creates.
-        
         for instruction in instructions:
             temp = instruction[0]
             cut = int(instruction[1])
-            self.__debug_attribute(parsed_slice)
             before = self.profile.loc[temp, self.name]
-            self.__debug_attribute(parsed_slice)
-            print(self.name, temp, cut)
             try:
-                after = parsed_slice[temp][cut]
+            	after = parsed_slice[temp].loc[int(cut), "AVG"]
             except KeyError:
-                print(cut,"th region undefined. Are you sure that keeper_data.csv corresponds to the graphs in the directory?")
-                continue
+            	print("Bad data from graph: "+self.name+"_"+temp+"_in_range_"+str(cut)+".png")
+            	continue
             self.profile.loc[temp, self.name] = after
-            self.write_changelog("Changed "+self.name+" "+str(temp)+"_Calpoint From_"+str(before)+"_To_"+str(after) + "From")
+            self.write_changelog("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
+            print("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
 
     
     def auto_update_calpoint(self, parsed_slice):
