@@ -99,7 +99,6 @@ class slifercal(object):
         if timeit:
             readings = time.time()
         self.__read_data()
-        print(self.kd_name)
         if timeit:
             readingf=time.time()
             cleans = time.time()
@@ -117,7 +116,7 @@ class slifercal(object):
             update_cals = time.time()
         for name in self.df.columns.values:
             if name != "Time":
-                thermistors[name] = tp(name, self.keeper_data_name)
+                thermistors[name] = tp(name, self.kd_name)
         for key in thermistors:
             if key != "Time":
                 try:
@@ -197,7 +196,7 @@ class slifercal(object):
                 self.keeper_data = pickle.load(fin)
             print("File Read")
         elif file_location != None:
-            self.keeper_data_name = file_location
+            self.kd_name = file_location
             print("Reading file")
             with open(file_location, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
