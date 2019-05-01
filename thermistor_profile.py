@@ -101,16 +101,16 @@ class thermistor_profile(object):
             cut = int(instruction[1])
             before = self.profile.loc[temp, self.name]
             if self.parsed_slice[temp].loc[int(cut), "AVG"] == 0:
-            	print("Average in range", cut,"from", self.parsed_path, "is 0... Skipping.")
-            	continue
+                print("Average in range", cut,"from", self.parsed_path, "is 0... Skipping.")
+                continue
             if self.parsed_slice[temp].loc[int(cut), "STD"] == 0:
-            	print("Standard Deviation is ZERO in range",cut,"from")
-            	continue
+                print("Standard Deviation is ZERO in range",cut,"from")
+                continue
             try:
-            	after = self.parsed_slice[temp].loc[int(cut), "AVG"]
+                after = self.parsed_slice[temp].loc[int(cut), "AVG"]
             except KeyError:
-            	print("Bad data from graph: "+self.name+"_"+temp+"_in_range_"+str(cut)+".png", '\n', cut, "Does not exist in parsed data at specified temperature range.")
-            	continue
+                print("Bad data from graph: "+self.name+"_"+temp+"_in_range_"+str(cut)+".png", '\n', cut, "Does not exist in parsed data at specified temperature range.")
+                continue
             self.profile.loc[temp, self.name] = after
             self.write_changelog("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
             self.plot_calibration()
@@ -128,8 +128,12 @@ class thermistor_profile(object):
     def calibrate_curve(self):
         self.__load_coefficents(do_print=False)
         if self.name in self.profile.columns.values:
+            print(self.profile)
             self.datapoints = self.profile.loc[self.profile.index.values, self.name].sort_values()
+            print(self.droppit)
             self.datapoints = self.datapoints.drop(self.droppit)
+            self.datapoints = self.datapoints.dropna(axis=0)
+            print(self.datapoints)
             
             rows = self.datapoints.index.values
             dp = [x for x in self.datapoints]
