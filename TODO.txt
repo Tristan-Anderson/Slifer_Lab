@@ -1,0 +1,31 @@
+4.27.2019 Thermistor profile:
+
+Currently a scaffolding has been constructed - but nothing really more than that. What comes next is as follows:
+	slifercal:
+		Short term:	
+			- MULTI-THREADDING B-A-B-Y!
+			- Decoupple "n-most stable" from graphing module
+			- Decoupple comments from graphin module
+			- Decoupple multiple-files for graphing from graphing module
+		
+		Long term:
+			- Implement "general" features (one thermistor look up, etc..)
+			- Implement GUI
+		
+	
+	Thermistor Profile:
+		thermistor_profile.update_calpoint()
+			(DONE) Grab file names of graphs produced by data-ripper
+			(DONE) Parse file names.
+			(DONE) If parsed file name matches thermistor corresponding to thermistor profile instance - keep that parsed information.
+			(DONE) Locate where in curve_coefficent_data.csv are points to be replaced
+			(DONE) Execute based on that above information
+			- ADD shell thermometry to curve_coefficent_data.csv
+			- WRITE TO LOGFILE.
+
+TUE April 30, 2019
+	Slifer Cal:
+		keyword_highlighter(keywords)
+			- Pass function a list of keywords
+			- Uses plotting module to plot the information surrounding those keywords.
+		

@@ -60,15 +60,11 @@ class slifercal(object):
         def_name = text[:text.find('=')].strip()
         self.name = def_name
 
-    def __readfile(self):
-        if self.datafile_location == None:
-            print(
-                "No datafile was used to initalize the instance!\
-                \nAssuming filename is \"data.csv\"")
-            self.datafile_location = "data.csv"
-        with open(self.datafile_location,'r') as f:
-            self.df = pandas.read_csv(f)
-        print("File loaded.")
+    def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
+        self.__read_data()
+        self.__cleandf()
+        self.__range_election(rangeshift=rangeshift, range_length=range_length)
+        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
 
     def __cleandf(self):
         #############################################
@@ -99,147 +95,43 @@ class slifercal(object):
                 if name != 'Time' and name not in column:
                     self.df.drop(columns=name)
 
-    def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
-        self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
-        return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
-
-    def __time_steps_suck(self):
-        ###################################
-        """
-           This will find the average
-           timestep in between the first
-           10 datapoints, and use that 
-           to search "Hour long slices" 
-                   of the data.
-                                        """
-        ###################################
-        df_times = []
-        diff_times = []
-        if type(self.df["Time"][1]) == str:
-            for i in range(1,10):
-                ent = dateutil.parser.parse(self.df["Time"][i+1])-dateutil.parser.parse(self.df["Time"][i])
-                df_times.append(ent.total_seconds())
-            self.average_timestep = numpy.mean(df_times)
-        elif type(self.df["Time"][1]) == numpy.float64:
-            for i in range(1, 10):
-                df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
-            self.average_timestep = numpy.mean(df_times)
-
-    def __save_top_n_ranges(self, n=10):
-        ########################################
-        """
-           This is the self.keeper_data parser 
-           that sorts through self.keeper_data
-           and creates a new dictionary con-
-           taining the n most stable regions 
-                           of data.
-                                              """
-        #########################################
-        print("Parsing data...")
-        self.thermistor_calibration_points = {}
-        for thermistor in self.keeper_data:
-            calibration_list = {}
-            for temperature in self.keeper_data[thermistor]:
-                min_std = []
-                slice_number = []
-                data = []
-                for nth_range in self.keeper_data[thermistor][temperature]:
-                    std = self.keeper_data[thermistor][temperature][nth_range][0]
-                    avg = self.keeper_data[thermistor][temperature][nth_range][1]
-                    rng = self.keeper_data[thermistor][temperature][nth_range][2]
-                    try:
-                        if max(min_std) > std:
-                            min_std.append(std)
-                            slice_number.append(nth_range)
-                            data.append([std,avg,rng])
-                    except ValueError:
-                        min_std.append(std)
-                        slice_number.append(nth_range)
-                        data.append([std,avg,rng])
-                    if len(min_std) > n:
-                        last_max = max(min_std)
-                        for i in range(0, len(min_std)):
-                            if last_max == min_std[i]:
-                                del min_std[i]
-                                del slice_number[i]
-                                del data[i]
-                                break
+    def complete(self, timeit, rangeshift=1, n_best=3, range_length=None, dpi_val=50, logbook=True):
+        if timeit:
+            readings = time.time()
+        self.__read_data()
+        print(self.kd_name)
+        if timeit:
+            readingf=time.time()
+            cleans = time.time()
+        self.__cleandf()
+        if timeit:
+            cleanf=time.time()
+            analysiss = time.time()
+        self.__range_election(rangeshift=rangeshift, range_length=range_length)
+        if timeit:
+            analysisf = time.time()
+            plottings = time.time()
+        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
+        if timeit:
+            plottingf=time.time()
+            update_cals = time.time()
+        for name in self.df.columns.values:
+            if name != "Time":
+                thermistors[name] = tp(name, self.keeper_data_name)
+        for key in thermistors:
+            if key != "Time":
                 try:
-                    calibration_list[temperature]= dict(zip(slice_number, data))
+                    thermistors[key].auto_update_calpoint(self.keeper_data[name])
                 except:
-                    print("No Calibration point present for", thermistor, "in", temperature, " range.")
                     continue
-                print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
-            self.thermistor_calibration_points[thermistor] = calibration_list
+        if timeit:
+            update_calf = time.time()
+            print("Reading:", readingf-readings, "Cleaning:", cleanf-cleans, "Turbo-Anal-Isis:", analysisf-analysiss, "Plotting:",plottingf-plottings,"Cals:",update_calf-update_cals)
 
-    def __range_election_metric(self,column_name, rangeshift):
-        temp_RT_dict = {}
-        temp_LN2_dict = {}
-        temp_LHe_dict = {}
-        if column_name == "Time":
-            print("Starting data analysis")
-            return False
-        elif column_name != "Time":
-            print("Analyzing",column_name)
-            nth_datarange = []
-            range_begin = 0
-            range_end = self.range_end
-            what_shift_is_this = 0
-            nth_range = 0
-            while range_end < len(self.df[column_name]): # Data Slice
-                if what_shift_is_this % int(len(self.df[column_name])/4) == 0 and what_shift_is_this != 0:
-                    print(
-                        what_shift_is_this, "of",
-                        int((len(self.df[column_name])-self.range_end)/rangeshift),
-                        "Ranges averaged.")
-                df_range =[range_begin,range_end]
-                data_slice = self.df[column_name][range_begin:range_end]
-                if not data_slice.isnull().values.any(): # If there are no zeros in the range, average the range
-                    avg = numpy.average(data_slice) # If the range is within what we are looking for 
-                    std = numpy.std(data_slice)
-                    nth_datarange=[std, avg, df_range] # Save some stuff about it
-                    temperature_range = what_temperature_range_are_we_in(avg,column_name) # Make another index for the following dataset
-                    if temperature_range == 0:
-                        temp_RT_dict[nth_range] = nth_datarange
-                    elif temperature_range == 1:
-                        temp_LN2_dict[nth_range] = nth_datarange
-                    elif temperature_range == 2:
-                        temp_LHe_dict[nth_range] = nth_datarange
-                nth_range += 1
-                range_end += rangeshift # Slice another range
-                range_begin += rangeshift
-                what_shift_is_this += 1
-            self.keeper_data[column_name] = {
-                "RT":temp_RT_dict, "LN2":temp_LN2_dict,
-                "LHe":temp_LHe_dict} # Save data on thermistor; continue
-            print("Completed", column_name+"\'s analysis")
-            return True
-        return False
-
-    def __range_election(self, rangeshift=1, range_length=None):
-        #############################################################
-        """
-           This is the 'brawns' of the program. This method slices
-           data in self.df, skips the slice if there are any zero 
-           vals the the slice. Then takes the files average, std,
-           and assigns it a "Temperature range" based on ballpark
-                       estimates found in the function:
-                      what_temperature_range_are_we_in()
-                                                                  """
-        #############################################################
-        if range_length == None:
-            print("No range length given. Making range length one hour long.")
-            self.__time_steps_suck()
-            self.range_end = int(3600/self.average_timestep)
-        else:
-            self.range_end = range_length
-        self.keeper_data = {}
-        for column_name in self.df: # Thermistor
-            self.__range_election_metric(column_name, rangeshift)
-        self.time_for_range_election_pickle = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-        with open('keeper_data_original_'+self.time_for_range_election_pickle+'.pk', 'wb') as handle:
-            pickle.dump(self.keeper_data, handle)
-        print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
+    def find_stable_regions(self, rangeshift=1):
+        self.__read_data()
+        self.__cleandf()
+        self.__range_election(rangeshift=rangeshift)
 
     def __keeper_data_cleaner(self, do_i_print=True):
         #######################################
@@ -251,12 +143,10 @@ class slifercal(object):
         print("Parsing data...")
         self.thermistor_calibration_points = {}
         for thermistor in self.keeper_data:
-            calibration_list = {}
-            for temperature in self.keeper_data[thermistor]:
-                min_std = 50
-                slice_numbers = 0
-                for nth_range in self.keeper_data[thermistor][temperature]:
-                    std = self.keeper_data[thermistor][temperature][nth_range][0]
+            for temprange in self.keeper_data[thermistor]:
+                min_std = 100000000000
+                for row in self.keeper_data[thermistor][temprange].itertuples(name=None):
+                    std = row[1]
                     if min_std > std:
                         min_std = std
                         slice_number = nth_range
@@ -273,54 +163,6 @@ class slifercal(object):
                     print("Located flattest", temperature, 
                           "datapoint for thermistor:", thermistor)
             self.thermistor_calibration_points[thermistor] = calibration_list
-        if do_i_print:
-            t = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-            with open('thermistor_calibration_points_'+t+'.pk', 'wb') as handle:
-                pickle.dump(self.thermistor_calibration_points, handle)
-            print("Dictionary pickled as:", 'thermistor_calibration_points_'+t+'.pk')
-
-    def __load_logbook(self):
-        if self.logbook_datafile_location == None:
-            print("No loogbook was used to initalize the instance!\nAssuming filename is \"logbook_data.csv\"")
-            self.logbook_datafile_location = "logbook_data.csv"
-        with open(self.logbook_datafile_location,'r') as f:
-            self.logbook_df = pandas.read_csv(f, sep='\t')
-        self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
-        print("Data Record File loaded.")
-
-    def __load_data_record(self):
-        if self.data_record_datafile_location == None:
-            print("No loogbook was used to initalize the instance!\nAssuming filename is \"data_record.csv\"")
-            self.data_record_datafile_location = "data_record.csv"
-        with open(self.data_record_datafile_location,'r') as f:
-            self.record_df = pandas.read_csv(f, sep='\t')
-        self.record_df["Time"] = pandas.to_datetime(self.record_df['Time'])
-        print("Data Record loaded.")
-
-    def __nearest(self, test_val, iterable): # In an interable data-structure, find the nearest to the value presented.
-        return min(iterable, key=lambda x: abs(x - test_val))
-
-    def return_dfs(self):
-        self.load_data()
-        self.__keeper_data_cleaner(do_i_print=False)
-        self.__readfile()
-        self.__cleandf()
-        col_names = self.df.columns.values
-        heck = {name:tp(name) for name in col_names}
-        for key in heck:
-            if key != "Time":
-                heck[key].update_calibration()
-                
-    def find_stable_regions(self, rangeshift=1, n_best=10):
-        self.__readfile()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift)
-
-    def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
-        self.__readfile()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift, range_length=range_length)
-        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
 
     def load_data(self, file_location=None):
         ###################################################
@@ -349,18 +191,180 @@ class slifercal(object):
             big_date = str(big_date)
             for file in list_of_files:
                 if big_date in file:
-                    self.keeper_data_name = file
+                    self.kd_name = file
             print("Pickle found.  Reading file...")
-            with open(self.keeper_data_name, 'rb') as fin:
+            with open(self.kd_name, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
             print("File Read")
-            self.__keeper_data_cleaner(False)
         elif file_location != None:
+            self.keeper_data_name = file_location
             print("Reading file")
             with open(file_location, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
             print("File read")
-            self.__keeper_data_cleaner(False)
+
+    def __load_data_record(self):
+        if self.data_record_datafile_location == None:
+            print("No loogbook was used to initalize the instance!\nAssuming filename is \"data_record.csv\"")
+            self.data_record_datafile_location = "data_record.csv"
+        with open(self.data_record_datafile_location,'r') as f:
+            self.record_df = pandas.read_csv(f, sep='\t')
+        self.record_df["Time"] = pandas.to_datetime(self.record_df['Time'])
+        print("Data Record loaded.")
+
+    def __load_logbook(self):
+        if self.logbook_datafile_location == None:
+            print("No loogbook was used to initalize the instance!\nAssuming filename is \"logbook_data.csv\"")
+            self.logbook_datafile_location = "logbook_data.csv"
+        with open(self.logbook_datafile_location,'r') as f:
+            self.logbook_df = pandas.read_csv(f, sep='\t')
+        self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
+        print("Data Record File loaded.")
+
+
+    def __nearest(self, test_val, iterable): # In an interable data-structure, find the nearest to the value presented.
+        return min(iterable, key=lambda x: abs(x - test_val))
+
+    def __range_election(self, rangeshift=1, range_length=None):
+        #############################################################
+        """
+           This is the 'brawns' of the program. This method slices
+           data in self.df, skips the slice if there are any zero 
+           vals the the slice. Then takes the files average, std,
+           and assigns it a "Temperature range" based on ballpark
+                       estimates found in the function:
+                      what_temperature_range_are_we_in()
+                                                                  """
+        #############################################################
+        if range_length == None:
+            print("No range length given. Making range length one hour long.")
+            self.__time_steps_suck()
+            self.range_end = int(3600/self.average_timestep)
+        else:
+            self.range_end = range_length
+        self.keeper_data = {}
+        for column_name in self.df: # Thermistor
+            self.__range_election_metric(column_name, rangeshift)
+        self.time_for_range_election_pickle = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        with open('keeper_data_original_'+self.time_for_range_election_pickle+'.pk', 'wb') as handle:
+            pickle.dump(self.keeper_data, handle)
+        print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
+        self.kd_name = 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk'
+
+    def __range_election_metric(self,column_name, rangeshift):
+        temp_RT_dict = {}
+        temp_LN2_dict = {}
+        temp_LHe_dict = {}
+        if column_name == "Time":
+            print("Starting data analysis")
+            return False
+        elif column_name != "Time":
+            print("Analyzing",column_name)
+            nth_datarange = []
+            range_begin = 0
+            range_end = self.range_end
+            what_shift_is_this = 0
+            nth_range = 0
+            while range_end < len(self.df[column_name]): # Data Slice
+                if what_shift_is_this % int(len(self.df[column_name])/4) == 0 and what_shift_is_this != 0:
+                    print(
+                        what_shift_is_this, "of",
+                        int((len(self.df[column_name])-self.range_end)/rangeshift),
+                        "Ranges averaged.")
+                data_slice = self.df[column_name][range_begin:range_end]
+                if not data_slice.isnull().values.any(): # If there are no zeros in the range, average the range
+                    avg = numpy.average(data_slice) # If the range is within what we are looking for 
+                    std = numpy.std(data_slice)
+                    nth_datarange=[std, avg, range_begin,range_end] # Save some stuff about it
+                    temperature_range = what_temperature_range_are_we_in(avg,column_name) # Make another index for the following dataset
+                    if temperature_range == 0:
+                        temp_RT_dict[nth_range] = nth_datarange
+                    elif temperature_range == 1:
+                        temp_LN2_dict[nth_range] = nth_datarange
+                    elif temperature_range == 2:
+                        temp_LHe_dict[nth_range] = nth_datarange
+                nth_range += 1
+                range_end += rangeshift # Slice another range
+                range_begin += rangeshift
+                what_shift_is_this += 1
+            self.keeper_data[column_name] = {
+                "RT":pandas.DataFrame.from_dict(temp_RT_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"]),
+                "LN2":pandas.DataFrame.from_dict(temp_LN2_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"]),
+                "LHe":pandas.DataFrame.from_dict(temp_LHe_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])} # Save data on thermistor; continue
+            return True
+        return False
+
+    def __read_data(self):
+        if self.datafile_location == None:
+            print(
+                "No datafile was used to initalize the instance!\
+                \nAssuming filename is \"data.csv\"")
+            self.datafile_location = "data.csv"
+        with open(self.datafile_location,'r') as f:
+            self.df = pandas.read_csv(f)
+        print("File loaded.")
+
+    def return_dfs(self):
+        self.load_data()
+        self.__read_data()
+        self.__cleandf()
+        thermistors = {}
+        for name in self.df.columns.values:
+            if name != "Time":
+                thermistors[name] = tp(name, self.kd_name, self.keeper_data[name])
+        for key in thermistors:
+            if key != "Time":
+                thermistors[key].calibrate_curve()
+
+    def __save_top_n_ranges(self, n=10):
+        ########################################
+        """
+           This is the self.keeper_data parser 
+           that sorts through self.keeper_data
+           and creates a new dictionary con-
+           taining the n most stable regions 
+                           of data.
+                                              """
+        #########################################
+        print("Parsing parsed data...")
+        self.thermistor_calibration_points = {}
+        for thermistor in self.keeper_data:
+            calibration_list = {}
+            for temperature in self.keeper_data[thermistor]:
+                try:
+                    calibration_list[temperature]= self.keeper_data[thermistor][temperature].nsmallest(n, "STD", keep="first")
+                except:
+                    print("No Calibration point present for", thermistor, "in", temperature, " range.")
+                    continue
+                print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
+            self.thermistor_calibration_points[thermistor] = calibration_list
+
+    def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
+        self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
+        return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
+
+    def __time_steps_suck(self):
+        ###################################
+        """
+           This will find the average
+           timestep in between the first
+           10 datapoints, and use that 
+           to search "Hour long slices" 
+                   of the data.
+                                        """
+        ###################################
+        df_times = []
+        diff_times = []
+        if type(self.df["Time"][1]) == str:
+            for i in range(1,10):
+                ent = dateutil.parser.parse(self.df["Time"][i+1])-dateutil.parser.parse(self.df["Time"][i])
+                df_times.append(ent.total_seconds())
+            self.average_timestep = numpy.mean(df_times)
+        elif type(self.df["Time"][1]) == numpy.float64:
+            for i in range(1, 10):
+                df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
+            self.average_timestep = numpy.mean(df_times)
+                
 
     def plot_calibration_candidates(self, n_best=10, dpi_val=150, plotwidth=1000, plot_logbook=False, data_record=True):
         #################################################################################
@@ -381,7 +385,7 @@ class slifercal(object):
             k = self.logbook_entries
         except AttributeError:
             del k
-            self.__readfile()
+            self.__read_data()
             self.__save_top_n_ranges(n=n_best)
         ### If you want to plot the logbook. Load the logbook. ###
         if plot_logbook:
@@ -410,11 +414,12 @@ class slifercal(object):
         ### Begin plotting ###
         for thermistor in self.thermistor_calibration_points:
             for temperature in self.thermistor_calibration_points[thermistor]:
-                for nth_range in self.thermistor_calibration_points[thermistor][temperature]:
-                    avg = self.thermistor_calibration_points[thermistor][temperature][nth_range][1]
+                for packet in self.thermistor_calibration_points[thermistor][temperature].itertuples(name=None):
+                    avg = packet[2]
                     if avg > 0:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-                        std = self.thermistor_calibration_points[thermistor][temperature][nth_range][0]
-                        rng = self.thermistor_calibration_points[thermistor][temperature][nth_range][2]
+                        std = packet[1]
+                        rng = [packet[3],packet[4]]
+                        nth_range = packet[0]
                         (rng_start, rng_end) = (rng[0], rng[1])
                         (rng_ss,rng_ee) = (rng_start, rng_end)
                         d_points = rng[1]-rng[0]
@@ -429,6 +434,7 @@ class slifercal(object):
                             else:
                                 break
                         (df_xslice,df_yslice) = (self.df["Time"][rng_start:rng_end], self.df[thermistor][rng_start:rng_end])
+                        
                         if plot_logbook:
                             ### Data selection ###
                             (range_start, range_end) = (min(df_xslice), max(df_xslice))
@@ -448,9 +454,7 @@ class slifercal(object):
                             data_record_slice = self.record_df[data_record_start_index:data_record_end_index]
                             data_record_slice = data_record_slice[data_record_slice["State"].isin([1])]
                             data_record_slice = data_record_slice[data_record_slice["Time"].isin(pandas.date_range(start=range_start,end=range_end))]
-                            #if len(data_record_slice["Time"]) == 0:
-                                #print("Rejected", thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                                #continue
+
                             ### Figure Generation ###
                             fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
                             big_fig = fig.add_subplot(111) # Canvas
@@ -478,6 +482,7 @@ class slifercal(object):
                                         xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
                                         xycoords='figure pixels')
                                 v += 1
+                            
                             v = 0
                             poi = True
                             for comment in logbook_slice["Comment"]: 
@@ -541,7 +546,7 @@ class slifercal(object):
                             graph.annotate(
                                 str(df_xslice[rng_ss]),
                                 xy=(df_xslice[rng_ss], avg+max(self.df[thermistor][rng_start:rng_end])*0.053),
-                                xycoords='data', color='red')
+                                xycoords='data', color='red') # The range-of-interest start time
                             graph.plot(
                                 (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
                                 (avg-max(self.df[thermistor][rng_start:rng_end])*0.05,avg+max(self.df[thermistor][rng_start:rng_end])*0.05),
@@ -549,7 +554,7 @@ class slifercal(object):
                             graph.annotate(
                                 str(df_xslice[rng_ee-1]),
                                 xy=(df_xslice[rng_ee-1], avg+max(self.df[thermistor][rng_start:rng_end])*0.053),
-                                xycoords='data', color='red')
+                                xycoords='data', color='red') # The range of interest end time
 
                             ### Annotations ###
                             big_fig.annotate(
@@ -573,12 +578,13 @@ class slifercal(object):
 
                             ### Save Plot ###
                             graph.legend(loc='best')
-                            if milimeter_waves == True:	
-                            	plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-                            	print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-                            elif milimeter_waves == False:
-                                print("Skipped "+thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                            plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
+                            print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
                             plt.close('all')
                             plt.clf()
                     gc.collect() # You will run out of memory if you do not do this.
+
+    def plotting(self, rangeshift=1, nbest=20, range_length=None, dpi_val=5, logbook=True):
+        self.load_data()
+        self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
 
