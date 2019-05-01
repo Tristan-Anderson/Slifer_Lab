@@ -99,6 +99,7 @@ class slifercal(object):
         if timeit:
             readings = time.time()
         self.__read_data()
+        print(self.kd_name)
         if timeit:
             readingf=time.time()
             cleans = time.time()
