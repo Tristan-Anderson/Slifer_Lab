@@ -128,12 +128,9 @@ class thermistor_profile(object):
     def calibrate_curve(self):
         self.__load_coefficents(do_print=False)
         if self.name in self.profile.columns.values:
-            print(self.profile)
             self.datapoints = self.profile.loc[self.profile.index.values, self.name].sort_values()
-            print(self.droppit)
             self.datapoints = self.datapoints.drop(self.droppit)
             self.datapoints = self.datapoints.dropna(axis=0)
-            print(self.datapoints)
             
             rows = self.datapoints.index.values
             dp = [x for x in self.datapoints]
