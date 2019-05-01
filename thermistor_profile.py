@@ -24,7 +24,8 @@ class thermistor_profile(object):
                             thermistor curve 
                                                                 """
     ###############################################################
-    def __init__(self, name, parsed_path, profile=None, changelog="thermometry_changelog.csv"):
+    def __init__(self, name, parsed_path, parsed_slice, profile=None, changelog="thermometry_changelog.csv"):
+        self.parsed_slice = parsed_slice
         self.parsed_path = parsed_path
         self.droppit = ['a', 'b', 'c']
         self.profile_path = profile
@@ -46,7 +47,7 @@ class thermistor_profile(object):
                     \nAssuming coefficent csv name to be: \"curve_coefficent_data.csv\"")
             self.profile_path = "curve_coefficent_data.csv"
         with open(self.profile_path, 'r') as f:
-            self.profile = pandas.read_csv(f, sep='\t')
+            self.profile = pandas.read_csv(f, sep=',')
         self.profile = self.profile.set_index("Name")
 
     def __load_changelog(self, do_print=True):
@@ -61,7 +62,7 @@ class thermistor_profile(object):
 
     def write_coefficents(self):
         with open("thermometry_changelog.csv", 'w') as f:
-            self.profile.to_csv(f, sep='\t', index=False)
+            self.profile.to_csv(f, sep=',', index=False)
 
     def write_changelog(self, message):
         with open(self.changelog_path, 'a') as f:
@@ -86,7 +87,7 @@ class thermistor_profile(object):
         self.changelog = self.changelog.append(entry, ignore_index=True)
         self.write_changelog()
 
-    def __execute_instructions(self, instructions, parsed_slice):
+    def __execute_instructions(self, instructions):
         self.__load_coefficents(do_print=False)  
         # We need to also load the keeper_data dict from slifercal
         # Without abusing small-RAM systems.
@@ -99,17 +100,22 @@ class thermistor_profile(object):
             temp = instruction[0]
             cut = int(instruction[1])
             before = self.profile.loc[temp, self.name]
+            if self.parsed_slice[temp].loc[int(cut), "AVG"] == 0:
+            	print("Average in range", cut,"from", self.parsed_path, "is 0... Skipping.")
+            	continue
+            if self.parsed_slice[temp].loc[int(cut), "STD"] == 0:
+            	print("Standard Deviation is ZERO in range",cut,"from")
+            	continue
             try:
-            	after = parsed_slice[temp].loc[int(cut), "AVG"]
+            	after = self.parsed_slice[temp].loc[int(cut), "AVG"]
             except KeyError:
-            	print("Bad data from graph: "+self.name+"_"+temp+"_in_range_"+str(cut)+".png")
+            	print("Bad data from graph: "+self.name+"_"+temp+"_in_range_"+str(cut)+".png", '\n', cut, "Does not exist in parsed data at specified temperature range.")
             	continue
             self.profile.loc[temp, self.name] = after
             self.write_changelog("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
-            print("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
+            self.plot_calibration()
 
-    
-    def auto_update_calpoint(self, parsed_slice):
+    def auto_update_calpoint(self):
         instructions = []
         self.__load_coefficents(do_print=False)  
         for file in os.listdir():
@@ -117,16 +123,14 @@ class thermistor_profile(object):
                 if file.split("_")[0] == self.name:
                     if self.name in self.profile.columns.values:
                         instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
-        self.__execute_instructions(instructions, parsed_slice)
+        self.__execute_instructions(instructions, self.parsed_slice)
 
-
-
-    def plot_calibration(self):
+    def calibrate_curve(self):
         self.__load_coefficents(do_print=False)
         if self.name in self.profile.columns.values:
             self.datapoints = self.profile.loc[self.profile.index.values, self.name].sort_values()
-            self.datapoints = self.datapoints.dropna()
             self.datapoints = self.datapoints.drop(self.droppit)
+            
             rows = self.datapoints.index.values
             dp = [x for x in self.datapoints]
             popt, pconv = optimize.curve_fit(function, self.datapoints, self.__available_thermistor_temperatures())
