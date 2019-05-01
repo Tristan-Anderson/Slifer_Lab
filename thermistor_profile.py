@@ -1,4 +1,4 @@
-ppppimport pandas, traceback, datetime, time, numpy, os, glob, matplotlib, scipy, pprint
+import pandas, traceback, datetime, time, numpy, os, glob, matplotlib, scipy, pprint
 from scipy import optimize, stats
 from matplotlib import pyplot as plt
 import _pickle as pickle
@@ -6,7 +6,6 @@ import _pickle as pickle
 """
 USE CAUTION WITH AB.F6. THE PREVIOUS THERMISTOR BROKE SO
 THE CURRENT CALIBRATION IS NOT VALID. AB.F6 IS R6.
-
 """
 
 def function(r,a,b,c):
@@ -128,12 +127,9 @@ class thermistor_profile(object):
     def calibrate_curve(self):
         self.__load_coefficents(do_print=False)
         if self.name in self.profile.columns.values:
-            print(self.profile)
             self.datapoints = self.profile.loc[self.profile.index.values, self.name].sort_values()
-            print(self.droppit)
             self.datapoints = self.datapoints.drop(self.droppit)
             self.datapoints = self.datapoints.dropna(axis=0)
-            print(self.datapoints)
             
             rows = self.datapoints.index.values
             dp = [x for x in self.datapoints]
@@ -188,5 +184,4 @@ class Ydata_Not_Found(Exception):
 class Thermistor_calibrations_dont_Exist(Exception):
     def __init__(self,key):
         self.message = key + " Is not in the coefficent file. For now, we will skip it."
-        self.expression = None
-
+self.expression = None
