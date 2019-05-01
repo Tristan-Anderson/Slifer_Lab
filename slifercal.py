@@ -311,10 +311,10 @@ class slifercal(object):
         thermistors = {}
         for name in self.df.columns.values:
             if name != "Time":
-                thermistors[name] = tp(name, self.kd_name)
+                thermistors[name] = tp(name, self.kd_name, self.keeper_data[name])
         for key in thermistors:
             if key != "Time":
-                thermistors[key].auto_update_calpoint(self.keeper_data[name])
+                thermistors[key].calibrate_curve()
 
     def __save_top_n_ranges(self, n=10):
         ########################################
