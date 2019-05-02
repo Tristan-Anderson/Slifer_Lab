@@ -589,3 +589,6 @@ class slifercal(object):
         self.load_data()
         self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
 
+#class graphing(object)
+#	def __init__(self, dataset, thermistor, comments=None, keywords=None)
+#		Decoupple Logbook data, and keywords from from plotting
