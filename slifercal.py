@@ -95,11 +95,10 @@ class slifercal(object):
                 if name != 'Time' and name not in column:
                     self.df.drop(columns=name)
 
-    def complete(self, timeit, rangeshift=1, n_best=3, range_length=None, dpi_val=50, logbook=True):
+    def complete(self, timeit, rangeshift=1, n_best=3, range_length=None, dpi_val=200, logbook=True):
         if timeit:
             readings = time.time()
         self.__read_data()
-        print(self.kd_name)
         if timeit:
             readingf=time.time()
             cleans = time.time()
@@ -115,18 +114,16 @@ class slifercal(object):
         if timeit:
             plottingf=time.time()
             update_cals = time.time()
+        thermistors = {}
         for name in self.df.columns.values:
             if name != "Time":
-                thermistors[name] = tp(name, self.kd_name)
+                thermistors[name] = tp(name, self.kd_name, self.keeper_data[name])
         for key in thermistors:
             if key != "Time":
-                try:
-                    thermistors[key].auto_update_calpoint(self.keeper_data[name])
-                except:
-                    continue
+                thermistors[key].auto_update_calpoint()
         if timeit:
             update_calf = time.time()
-            print("Reading:", readingf-readings, "Cleaning:", cleanf-cleans, "Turbo-Anal-Isis:", analysisf-analysiss, "Plotting:",plottingf-plottings,"Cals:",update_calf-update_cals)
+            print("\n\nReading:", readingf-readings, "\nCleaning:", cleanf-cleans, "\nTurbo-Anal-Isis:", analysisf-analysiss, "\nPlotting:",plottingf-plottings,"\nCals:",update_calf-update_cals)
 
     def find_stable_regions(self, rangeshift=1):
         self.__read_data()
@@ -193,8 +190,12 @@ class slifercal(object):
                 if big_date in file:
                     self.kd_name = file
             print("Pickle found.  Reading file...")
-            with open(self.kd_name, 'rb') as fin:
-                self.keeper_data = pickle.load(fin)
+            try:
+                with open(self.kd_name, 'rb') as fin:
+                    self.keeper_data = pickle.load(fin)
+            except AttributeError:
+                print("No parsed datafile. Exiting.")
+                exit()
             print("File Read")
         elif file_location != None:
             self.kd_name = file_location
