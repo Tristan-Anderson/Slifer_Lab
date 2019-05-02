@@ -6,7 +6,6 @@ import _pickle as pickle
 """
 USE CAUTION WITH AB.F6. THE PREVIOUS THERMISTOR BROKE SO
 THE CURRENT CALIBRATION IS NOT VALID. AB.F6 IS R6.
-
 """
 
 def function(r,a,b,c):
@@ -113,7 +112,7 @@ class thermistor_profile(object):
                 continue
             self.profile.loc[temp, self.name] = after
             self.write_changelog("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
-            self.plot_calibration()
+            self.calibrate_curve()
 
     def auto_update_calpoint(self):
         instructions = []
@@ -123,7 +122,7 @@ class thermistor_profile(object):
                 if file.split("_")[0] == self.name:
                     if self.name in self.profile.columns.values:
                         instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
-        self.__execute_instructions(instructions, self.parsed_slice)
+        self.__execute_instructions(instructions)
 
     def calibrate_curve(self):
         self.__load_coefficents(do_print=False)
@@ -174,16 +173,3 @@ class thermistor_profile(object):
             plt.close('all')
             plt.clf()
         
-
-class Ydata_Not_Found(Exception):
-    # If you have data that you are including in the calibration, make sure it has a matching 
-    def __init__(self, datapoints, name):
-        self.message = "###Number of calibration points ("+str(len(datapoints))+") used to calibrate "+name+"\n\
-        does not have existing temperature list. See line 54, of thermistor_profile.py to add another temperature \"profile\""
-        self.expression = None
-
-class Thermistor_calibrations_dont_Exist(Exception):
-    def __init__(self,key):
-        self.message = key + " Is not in the coefficent file. For now, we will skip it."
-        self.expression = None
-
