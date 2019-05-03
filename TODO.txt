@@ -29,3 +29,21 @@ TUE April 30, 2019
 			- Pass function a list of keywords
 			- Uses plotting module to plot the information surrounding those keywords.
 		
+
+FRI May 3, 2019
+	Tri-analyze:
+		Needs significant work. See the laundry list present in LabBook.
+		- Decouple n-best (Stable regions) from  graphing
+		- Decouple commenting from graphing ... etc.	
+		- REMOVE: Suite functionality. Add option for n-thermistors as opposed to analyzing the FULL datafile
+		- ADD: Thermistor in n-th range plotting
+		- ADD: Thermistor Date range plotting
+		- ADD: Keyword lookup
+	Graph:
+		Identified interesting plotting region. CCS.F4_LHe_in_range_58106.png
+			- Showing oscillations on the order of 100 Ohms at 3200 ohms. Oscillation magnitude on the order of 1/32 the measured ohmage.
+		Additional oscilations identified in AB.F5_LHe_in_range_58180.png on the order of 
+	
+	Temperature Profile:
+		Noticed that tp Auto-update-calibrations was not writing updated coefficents to the curve_coefficent_data.csv : Needs fixing.
+
