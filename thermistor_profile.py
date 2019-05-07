@@ -112,7 +112,7 @@ class thermistor_profile(object):
                 continue
             self.profile.loc[temp, self.name] = after
             self.write_changelog("Changed "+self.name+" "+str(temp)+" Calpoint "+str(before)+" To "+str(after) + " From "+self.parsed_path+'\n')
-            self.calibrate_curve()
+            self.calibrate_curve(plotting=True)
 
     def auto_update_calpoint(self):
         instructions = []
@@ -124,7 +124,7 @@ class thermistor_profile(object):
                         instructions.append([file.split("_")[1], file.split("_")[-1].split('.')[0]])
         self.__execute_instructions(instructions)
 
-    def calibrate_curve(self):
+    def calibrate_curve(self, plotting=False):
         self.__load_coefficents(do_print=False)
         if self.name in self.profile.columns.values:
             self.datapoints = self.profile.loc[self.profile.index.values, self.name].sort_values()
@@ -136,40 +136,42 @@ class thermistor_profile(object):
             popt, pconv = optimize.curve_fit(function, self.datapoints, self.__available_thermistor_temperatures())
             coeff = popt[0:3]
             (a,b,c) = coeff
-            if "AB" in self.name:
-                xdata = sorted([i for i in range(120,3000)],reverse=True)
-            if "CCS" in self.name:
-                xdata = sorted([i for i in range(875,4500)],reverse=True)
-            ydata = []
-            for i in xdata:
-                ydata.append(function(i,a,b,c))
-            k = list(zip(self.datapoints, self.__available_thermistor_temperatures()))
-            dpi=150
-            figure = plt.figure(figsize=(8,8), dpi=dpi)
-            graph=figure.add_subplot(111)
-            graph.plot(self.datapoints, self.__available_thermistor_temperatures(), 'ro',label="Initial Points")
-            graph.plot(xdata,ydata, label="Curve", color="blue")
-            graph.set_title(self.name)
-            graph.set_xlabel("Resistance (Ohms)")
-            graph.set_ylabel("Temperature (Kelvin)")
-            graph.legend(loc="best")
-            n = 0
-            rows = self.datapoints.index.values
-            for i in rows:
-                graph.annotate(i, xy=k[n], xycoords='data', color='k')
-                n += 1
-            graph.set_ylim(bottom=0, top=310)
-            graph.annotate("Initial Points: "+ str(k), xy=(2*dpi,6*dpi), xycoords='figure pixels')
-            graph.annotate("a: "+str(a), xy=(2*dpi,5.85*dpi), xycoords='figure pixels')
-            graph.annotate("b: "+str(b), xy=(2*dpi,5.7*dpi), xycoords='figure pixels')
-            graph.annotate("c: "+str(c), xy=(2*dpi,5.55*dpi), xycoords='figure pixels')
-            graph.annotate("T = a + b*exp(1000*c/r)", xy=(2*dpi,5.4*dpi), xycoords='figure pixels')
-            if len(self.datapoints) > 3:
-                chi_expected = [function(i,a,b,c) for i in self.datapoints]
-                chsq = scipy.stats.chisquare(self.__available_thermistor_temperatures(), f_exp=chi_expected)
-                print(chsq)
-                graph.annotate("One-way Chisquared: p = "+str(chsq[1]), xy=(2*dpi,5.25*dpi), xycoords='figure pixels')
-            plt.savefig(self.name+".png")
-            plt.close('all')
-            plt.clf()
+            (self.a, self.b, self.c) = coeff
+            if plotting:
+                if "AB" in self.name:
+                    xdata = sorted([i for i in range(120,3000)],reverse=True)
+                if "CCS" in self.name:
+                    xdata = sorted([i for i in range(875,4500)],reverse=True)
+                ydata = []
+                for i in xdata:
+                    ydata.append(function(i,a,b,c))
+                k = list(zip(self.datapoints, self.__available_thermistor_temperatures()))
+                dpi=150
+                figure = plt.figure(figsize=(8,8), dpi=dpi)
+                graph=figure.add_subplot(111)
+                graph.plot(self.datapoints, self.__available_thermistor_temperatures(), 'ro',label="Initial Points")
+                graph.plot(xdata,ydata, label="Curve", color="blue")
+                graph.set_title(self.name)
+                graph.set_xlabel("Resistance (Ohms)")
+                graph.set_ylabel("Temperature (Kelvin)")
+                graph.legend(loc="best")
+                n = 0
+                rows = self.datapoints.index.values
+                for i in rows:
+                    graph.annotate(i, xy=k[n], xycoords='data', color='k')
+                    n += 1
+                graph.set_ylim(bottom=0, top=310)
+                graph.annotate("Initial Points: "+ str(k), xy=(2*dpi,6*dpi), xycoords='figure pixels')
+                graph.annotate("a: "+str(a), xy=(2*dpi,5.85*dpi), xycoords='figure pixels')
+                graph.annotate("b: "+str(b), xy=(2*dpi,5.7*dpi), xycoords='figure pixels')
+                graph.annotate("c: "+str(c), xy=(2*dpi,5.55*dpi), xycoords='figure pixels')
+                graph.annotate("T = a + b*exp(1000*c/r)", xy=(2*dpi,5.4*dpi), xycoords='figure pixels')
+                if len(self.datapoints) > 3:
+                    chi_expected = [function(i,a,b,c) for i in self.datapoints]
+                    chsq = scipy.stats.chisquare(self.__available_thermistor_temperatures(), f_exp=chi_expected)
+                    print(chsq)
+                    graph.annotate("One-way Chisquared: p = "+str(chsq[1]), xy=(2*dpi,5.25*dpi), xycoords='figure pixels')
+                plt.savefig(self.name+".png")
+                plt.close('all')
+                plt.clf()
         
