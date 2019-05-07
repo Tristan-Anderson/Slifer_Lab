@@ -20,8 +20,8 @@ Currently a scaffolding has been constructed - but nothing really more than that
 			(DONE) If parsed file name matches thermistor corresponding to thermistor profile instance - keep that parsed information.
 			(DONE) Locate where in curve_coefficent_data.csv are points to be replaced
 			(DONE) Execute based on that above information
-			- ADD shell thermometry to curve_coefficent_data.csv
-			- WRITE TO LOGFILE.
+			(DONE) ADD shell thermometry to curve_coefficent_data.csv
+			(DONE) WRITE TO LOGFILE.
 
 TUE April 30, 2019
 	Slifer Cal:
@@ -29,3 +29,21 @@ TUE April 30, 2019
 			- Pass function a list of keywords
 			- Uses plotting module to plot the information surrounding those keywords.
 		
+
+FRI May 3, 2019
+	Tri-analyze:
+		Needs significant work. See the laundry list present in LabBook.
+		- Decouple n-best (Stable regions) from  graphing
+		- Decouple commenting from graphing ... etc.	
+		- REMOVE: Suite functionality. Add option for n-thermistors as opposed to analyzing the FULL datafile
+		- ADD: Thermistor in n-th range plotting
+		- ADD: Thermistor Date range plotting
+		- ADD: Keyword lookup
+	Graph:
+		Identified interesting plotting region. CCS.F4_LHe_in_range_58106.png
+			- Showing oscillations on the order of 100 Ohms at 3200 ohms. Oscillation magnitude on the order of 1/32 the measured ohmage.
+		Additional oscilations identified in AB.F5_LHe_in_range_58180.png on the order of 
+	
+	Temperature Profile:
+		(FIXED 5/6/19) Noticed that tp Auto-update-calibrations was not writing updated coefficents to the curve_coefficent_data.csv : Needs fixing.
+

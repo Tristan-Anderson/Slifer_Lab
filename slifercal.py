@@ -123,7 +123,7 @@ class slifercal(object):
                 thermistors[key].auto_update_calpoint()
         if timeit:
             update_calf = time.time()
-            print("\n\nReading:", readingf-readings, "\nCleaning:", cleanf-cleans, "\nTurbo-Anal-Isis:", analysisf-analysiss, "\nPlotting:",plottingf-plottings,"\nCals:",update_calf-update_cals)
+            print("\n\nReading:", readingf-readings, "\nCleaning:", cleanf-cleans, "\nAnalyis:", analysisf-analysiss, "\nPlotting:",plottingf-plottings,"\nCals:",update_calf-update_cals)
 
     def find_stable_regions(self, rangeshift=1):
         self.__read_data()
@@ -589,3 +589,6 @@ class slifercal(object):
         self.load_data()
         self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
 
+#class graphing(object)
+#	def __init__(self, dataset, thermistor, comments=None, keywords=None)
+#		Decoupple Logbook data, and keywords from from plotting
