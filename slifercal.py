@@ -305,17 +305,6 @@ class slifercal(object):
             self.df = pandas.read_csv(f)
         print("File loaded.")
 
-    def return_dfs(self):
-        self.load_data()
-        self.__read_data()
-        self.__cleandf()
-        thermistors = {}
-        for name in self.df.columns.values:
-            if name != "Time":
-                thermistors[name] = tp(name, self.kd_name, self.keeper_data[name])
-        for key in thermistors:
-            if key != "Time":
-                thermistors[key].calibrate_curve()
 
     def __save_top_n_ranges(self, n=10):
         ########################################
@@ -588,6 +577,19 @@ class slifercal(object):
     def plotting(self, rangeshift=1, nbest=20, range_length=None, dpi_val=5, logbook=True):
         self.load_data()
         self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
+
+    def return_dfs(self):
+        self.load_data()
+        self.__read_data()
+        self.__cleandf()
+        thermistors = {}
+        for name in self.df.columns.values:
+            if name != "Time":
+                thermistors[name] = tp(name, self.kd_name, self.keeper_data[name])
+        for key in thermistors:
+            if key != "Time":
+                thermistors[key].calibrate_curve()
+
 
 #class graphing(object)
 #	def __init__(self, dataset, thermistor, comments=None, keywords=None)

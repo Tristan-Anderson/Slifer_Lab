@@ -60,8 +60,8 @@ class thermistor_profile(object):
            self.changelog = pandas.read_csv(f, sep='\t')
 
     def write_coefficents(self):
-        with open("thermometry_changelog.csv", 'w') as f:
-            self.profile.to_csv(f, sep=',', index=False)
+        with open("curve_coefficent_data.csv", 'w') as f:
+            self.profile.to_csv(f, sep=',')
 
     def write_changelog(self, message):
         with open(self.changelog_path, 'a') as f:
@@ -76,10 +76,6 @@ class thermistor_profile(object):
             raise Ydata_Not_Found(self.name)
 
     def __logbook_entry(self, message):
-        ####################################
-        """
-                                         """
-        ####################################
         self.__load_changelog(do_print=False)
         entry = pandas.DataFrame({"Timestamp":datetime.datetime.now().strftime("%Y/%m/%d/ %H:%M:%S"),
             "Name":self.name, "Comment":message}, columns=["Timestamp", "Name", "Comment"], index=[1,2,3])
@@ -88,13 +84,6 @@ class thermistor_profile(object):
 
     def __execute_instructions(self, instructions):
         self.__load_coefficents(do_print=False)  
-        # We need to also load the keeper_data dict from slifercal
-        # Without abusing small-RAM systems.
-        # So we will take the slice of keeper_data that pertains to instance name
-        # This will create two copies of the parsed data.
-
-        # We only want this to be in memory and NOT an attribute to the instance due to pass-by-object
-        # Extra object container that it creates.
         for instruction in instructions:
             temp = instruction[0]
             cut = int(instruction[1])
@@ -136,7 +125,9 @@ class thermistor_profile(object):
             popt, pconv = optimize.curve_fit(function, self.datapoints, self.__available_thermistor_temperatures())
             coeff = popt[0:3]
             (a,b,c) = coeff
-            (self.a, self.b, self.c) = coeff
+            self.coefficent_list = ['a', 'b', 'c']
+            self.profile.loc[self.coefficent_list, self.name] = coeff
+            self.write_coefficents()
             if plotting:
                 if "AB" in self.name:
                     xdata = sorted([i for i in range(120,3000)],reverse=True)
