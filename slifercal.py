@@ -1,4 +1,5 @@
-import time, pandas, numpy, copy, datetime, os, traceback, dateutil.parser
+import time, pandas, numpy, copy, datetime, os, traceback, dateutil.parser, multiprocessing
+from multiprocessing import Pool
 from pandas.plotting import register_matplotlib_converters
 from thermistor_profile import thermistor_profile as tp
 import _pickle as pickle
@@ -50,7 +51,7 @@ class slifercal(object):
                 range_shift modifies how the slices of data are selected from the datafile. The default is 1, which shifts the range by 1 in the "averaging" section above
 
     """
-    def __init__(self,datafile_location=None, logbook_datafile_location=None, record_location=None):
+    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, record_location=None):
         register_matplotlib_converters() # Calling the calibrate method without this here told me to put this here.
         self.trslat = {0: "RT", 1: "LN2", 2: "LHe"}
         self.datafile_location = datafile_location
@@ -59,6 +60,10 @@ class slifercal(object):
         (filename,line_number,function_name,text)=traceback.extract_stack()[-2] # NAME of THIS CLASS (for pickling later if needed - but probably not.)
         def_name = text[:text.find('=')].strip()
         self.name = def_name
+        if processes == 0:
+            self.processes = int(2*multiprocessing.cpu_count()/3)
+        else:
+            self.processes = processes
 
     def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
         self.__read_data()
@@ -125,6 +130,12 @@ class slifercal(object):
             update_calf = time.time()
             print("\n\nReading:", readingf-readings, "\nCleaning:", cleanf-cleans, "\nAnalyis:", analysisf-analysiss, "\nPlotting:",plottingf-plottings,"\nCals:",update_calf-update_cals)
 
+    def __debug_attribute(self, obj):
+        import pprint
+        with open("debug.txt", 'w') as fout:
+            pprint.pprint(obj, fout)
+        print("Printed object to file: debug.txt")
+
     def find_stable_regions(self, rangeshift=1):
         self.__read_data()
         self.__cleandf()
@@ -141,7 +152,7 @@ class slifercal(object):
         self.thermistor_calibration_points = {}
         for thermistor in self.keeper_data:
             for temprange in self.keeper_data[thermistor]:
-                min_std = 100000000000
+                min_std = 100000000000 # God help you if your ranges are this noisy.
                 for row in self.keeper_data[thermistor][temprange].itertuples(name=None):
                     std = row[1]
                     if min_std > std:
@@ -244,18 +255,25 @@ class slifercal(object):
         else:
             self.range_end = range_length
         self.keeper_data = {}
-        for column_name in self.df: # Thermistor
-            self.__range_election_metric(column_name, rangeshift)
+        with Pool(processes=self.processes) as pool:
+            result_objects = [pool.apply_async(self.range_election_metric, args=(column_name, rangeshift)) for column_name in self.df]
+            pool.close()
+            pool.join()
+        results = [r.get() for r in result_objects if r.get() != False]
+        for dictionary in results:
+            self.keeper_data.update(dictionary)
         self.time_for_range_election_pickle = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         with open('keeper_data_original_'+self.time_for_range_election_pickle+'.pk', 'wb') as handle:
             pickle.dump(self.keeper_data, handle)
         print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
         self.kd_name = 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk'
 
-    def __range_election_metric(self,column_name, rangeshift):
+
+    def range_election_metric(self,column_name, rangeshift):
         temp_RT_dict = {}
         temp_LN2_dict = {}
         temp_LHe_dict = {}
+        keeper_data = {}
         if column_name == "Time":
             print("Starting data analysis")
             return False
@@ -288,12 +306,11 @@ class slifercal(object):
                 range_end += rangeshift # Slice another range
                 range_begin += rangeshift
                 what_shift_is_this += 1
-            self.keeper_data[column_name] = {
+            keeper_data[column_name] = {
                 "RT":pandas.DataFrame.from_dict(temp_RT_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"]),
                 "LN2":pandas.DataFrame.from_dict(temp_LN2_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"]),
                 "LHe":pandas.DataFrame.from_dict(temp_LHe_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])} # Save data on thermistor; continue
-            return True
-        return False
+            return keeper_data
 
     def __read_data(self):
         if self.datafile_location == None:
@@ -304,7 +321,6 @@ class slifercal(object):
         with open(self.datafile_location,'r') as f:
             self.df = pandas.read_csv(f)
         print("File loaded.")
-
 
     def __save_top_n_ranges(self, n=10):
         ########################################
@@ -355,7 +371,6 @@ class slifercal(object):
                 df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
             self.average_timestep = numpy.mean(df_times)
                 
-
     def plot_calibration_candidates(self, n_best=10, dpi_val=150, plotwidth=1000, plot_logbook=False, data_record=True):
         #################################################################################
         """
@@ -592,5 +607,5 @@ class slifercal(object):
 
 
 #class graphing(object)
-#	def __init__(self, dataset, thermistor, comments=None, keywords=None)
-#		Decoupple Logbook data, and keywords from from plotting
+#   def __init__(self, dataset, thermistor, comments=None, keywords=None)
+#       Decoupple Logbook data, and keywords from from plotting
