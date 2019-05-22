@@ -321,6 +321,8 @@ class slifercal(object):
         with open(self.datafile_location,'r') as f:
             self.df = pandas.read_csv(f)
         print("File loaded.")
+        if type(self.df["Time"][1]) == numpy.float64: # If david did not convert time from 1904/12/31 20:00:00, then do the conversion and put it into datetime.
+            self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
 
     def __save_top_n_ranges(self, n=10):
         ########################################
@@ -348,7 +350,7 @@ class slifercal(object):
     def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
         return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
-
+    
     def __time_steps_suck(self):
         ###################################
         """
@@ -370,8 +372,16 @@ class slifercal(object):
             for i in range(1, 10):
                 df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
             self.average_timestep = numpy.mean(df_times)
-                
-    def plot_calibration_candidates(self, n_best=10, dpi_val=150, plotwidth=1000, plot_logbook=False, data_record=True):
+
+    def make_some_graphs(self):
+        self.load_data()
+        self.__read_data()
+        for thermistor in self.keeper_data:
+            for temperature in self.keeper_data[thermistor]:
+                for cut, row in self.keeper_data[thermistor][temperature].iterrows():
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])
+               
+    def plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=True, dpi_val=150, plotwidth=1000):
         #################################################################################
         """
            This method can be used after load_data. If load_data was not called before
@@ -383,25 +393,6 @@ class slifercal(object):
                                                                                       """
         #################################################################################
         # STRUCTURE: thermistor_calibration_points = [Thermistor][Temperature][0:2] = [Minimum STD, average, [slice_start, slice_end]]
-        k = []
-        try:
-            k = self.thermistor_calibration_points
-            k = self.df
-            k = self.logbook_entries
-        except AttributeError:
-            del k
-            self.__read_data()
-            self.__save_top_n_ranges(n=n_best)
-        ### If you want to plot the logbook. Load the logbook. ###
-        if plot_logbook:
-            self.__load_logbook()
-        ### If you want to plot the data_record, load the data record. ### 
-        if data_record:
-            self.__load_data_record()
-        if type(self.df["Time"][1]) == numpy.float64: # If david did not convert time from 1904/12/31 20:00:00, then do the conversion and put it into datetime.
-            self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
-
-        ### Figure Formatting ###
         fig_x_dim = 32
         fig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim
@@ -416,179 +407,167 @@ class slifercal(object):
         fig_y_step_timestamp = (.15/18)*fig_y_dim
         fig_x_comment_start = (2/16)*fig_x_dim
 
-        ### Begin plotting ###
-        for thermistor in self.thermistor_calibration_points:
-            for temperature in self.thermistor_calibration_points[thermistor]:
-                for packet in self.thermistor_calibration_points[thermistor][temperature].itertuples(name=None):
-                    avg = packet[2]
-                    if avg > 0:                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
-                        std = packet[1]
-                        rng = [packet[3],packet[4]]
-                        nth_range = packet[0]
-                        (rng_start, rng_end) = (rng[0], rng[1])
-                        (rng_ss,rng_ee) = (rng_start, rng_end)
-                        d_points = rng[1]-rng[0]
-                        while rng_start > 0:
-                            if abs(rng_ss - rng_start) <= plotwidth and rng_start > 0:
-                                rng_start -= 1
-                            else:
-                                break
-                        while rng_end > 0:
-                            if abs(rng_ee - rng_end) <= plotwidth and rng_end < len(self.df["Time"]):
-                                rng_end += 1
-                            else:
-                                break
-                        (df_xslice,df_yslice) = (self.df["Time"][rng_start:rng_end], self.df[thermistor][rng_start:rng_end])
-                        
-                        if plot_logbook:
-                            ### Data selection ###
-                            (range_start, range_end) = (min(df_xslice), max(df_xslice))
-                            mag = False
-                            milimeter_waves = False
+        if kernel[1] > 0:
+            self.fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
+            self.canvas = self.fig.add_subplot(111)
+            std = kernel[0]
+            avg = kernel[1]
+            rng = [kernel[2],kernel[3]]
+            nth_range = cut
+            (rng_start, rng_end) = (rng[0], rng[1])
+            (rng_ss,rng_ee) = (rng_start, rng_end)
+            d_points = rng[1]-rng[0]
+            while rng_start > 0:
+                if abs(rng_ss - rng_start) <= plotwidth and rng_start > 0:
+                    rng_start -= 1
+                else:
+                    break
+            while rng_end > 0:
+                if abs(rng_ee - rng_end) <= plotwidth and rng_end < len(self.df["Time"]):
+                    rng_end += 1
+                else:
+                    break
+            (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
 
-                            logbook_start = self.__nearest(range_start, self.logbook_df["Time"])
-                            logbook_end = self.__nearest(range_end, self.logbook_df["Time"])
-                            logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start].index[0]
-                            logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
-                            logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
-                            
-                            datarecord_start = self.__nearest(range_start, self.record_df["Time"])
-                            datarecord_end = self.__nearest(range_end, self.record_df["Time"])
-                            data_record_start_index = self.record_df[self.record_df["Time"] == datarecord_start].index[0]
-                            data_record_end_index = self.record_df[self.record_df["Time"] == datarecord_end].index[0]
-                            data_record_slice = self.record_df[data_record_start_index:data_record_end_index]
-                            data_record_slice = data_record_slice[data_record_slice["State"].isin([1])]
-                            data_record_slice = data_record_slice[data_record_slice["Time"].isin(pandas.date_range(start=range_start,end=range_end))]
+            ### Annotations ###
+            self.canvas.annotate(
+                "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
+                '\nRange: '+str(rng)+'\nRange length: '+str(d_points)+\
+                '\nColumn Length: '+str(len(self.df[thermistor])),
+                xy=(fig_x_basic_info*dpi_val,fig_y_basic_info*dpi_val), 
+                xycoords='figure pixels')
+            self.canvas.annotate(
+                self.df["Time"][rng_start],
+                xy=(fig_x_start_range_data*dpi_val,fig_y_range_data*dpi_val),
+                xycoords='figure pixels')
+            self.canvas.annotate(
+                self.df["Time"][rng_end-1],
+                xy=(fig_x_end_range_data*dpi_val,fig_y_range_data*dpi_val),
+                xycoords='figure pixels')
 
-                            ### Figure Generation ###
-                            fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
-                            big_fig = fig.add_subplot(111) # Canvas
-                            graph = fig.add_subplot(211) # Top-Subplot where data goes
-                            footnotes = fig.add_subplot(212) # Bottom-Subplot where logbook comments go.
-                            footnotes.axis('off')
-                            big_fig.axis('off')
+            if comments is not None:
+                try:
+                    self.logbook_df
+                except:
+                    try:
+                        self.__load_logbook()
+                    except FileNotFoundError:
+                        self.logbook_df = self.df['Time', "Comment"]
 
+                self.canvas.annotate(
+                    "Logbook comments:",
+                    xy=(fig_x_logbook_comment*dpi_val,fig_y_logbook_comment*dpi_val),
+                    xycoords='figure pixels')
 
+                (range_start, range_end) = (min(df_xslice), max(df_xslice))
+                self.graph = self.fig.add_subplot(211)
+                self.footnotes = self.fig.add_subplot(212)
+                self.footnotes.axis('off')
+                self.canvas.axis('off')
 
-                            ### Determines What Entries in the Logbook needs to be colored, then colors them ###
-                            v = 0
-                            avg_comments = []
-                            magnet_comments = []
-                            for timestamp in logbook_slice["Time"]:
-                                if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
-                                    big_fig.annotate(
-                                        timestamp, 
-                                        xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-                                        xycoords='figure pixels', color="green") 
-                                    avg_comments.append(v)
-                                else:
-                                    big_fig.annotate(
-                                        timestamp, 
-                                        xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-                                        xycoords='figure pixels')
-                                v += 1
-                            
-                            v = 0
-                            poi = True
-                            for comment in logbook_slice["Comment"]: 
-                                have_i_printed = False
-                                if "waves" in str(comment) or "mm" in str(comment) or "UCA" in str(comment):
-                                    waves = True
-                                    big_fig.annotate(
-                                        comment, 
-                                        xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                                        xycoords='figure pixels', color='goldenrod')
-                                    x_loc = int(self.logbook_df[self.logbook_df["Comment"] == comment].index[0])
-                                    milimeter_waves = True
-                                    #graph.plot(
-                                        #(self.logbook_df.loc[x_loc, "Time"],self.logbook_df.loc[x_loc, "Time"]),
-                                        #(avg+max(self.df[thermistor][rng_start:rng_end])*0.01, avg-max(self.df[thermistor][rng_start:rng_end])*0.01),\
-                                        #color="goldenrod", label=("Where Waves were mentioned") if poi else None)
-                                    graph.plot(
-                                        self.logbook_df.loc[x_loc, "Time"],
-                                        avg+max(self.df[thermistor][rng_start:rng_end])*0.02, 'ro',
-                                        color="goldenrod", ms=10, label=("Where Waves were mentioned") if poi else None)
-                                    poi = False
-                                    have_i_printed = True
-                                if v in avg_comments and not have_i_printed:
-                                    for index in avg_comments:
-                                        if v == index:
-                                            big_fig.annotate(
-                                                comment, 
-                                                xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                                                xycoords='figure pixels', color='green')
-                                        have_i_printed = True
-                                elif not have_i_printed:
-                                    big_fig.annotate(
-                                        comment, 
-                                        xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                                        xycoords='figure pixels')
-                                    have_i_printed = True
-                                v += 1
-                            del v
+                ### Title and Labels ###
+                self.graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                self.graph.set_xlabel("Time")
+                self.graph.set_ylabel("Resistance")
+                self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
 
-                            ### Title and Labels ###
-                            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                            graph.set_xlabel("Time")
-                            graph.set_ylabel("Resistance")
-                            graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                ### All of the Data ###
+                self.graph.plot(self.df.loc[rng_start:rng_end, "Time"],self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
+                
+                ### Average Dashed Line ###
+                self.graph.plot(
+                    (df_xslice[rng_ss],df_xslice[rng_ee-1]),
+                    (avg,avg),'g', dashes=[30, 30], label="Average Value of selected Range")
+                
+                ### Red Lines ###
+                self.graph.plot(
+                    (df_xslice[rng_ss],df_xslice[rng_ss]),
+                    (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
+                    'r')
+                self.graph.annotate(
+                    str(df_xslice[rng_ss]),
+                    xy=(df_xslice[rng_ss], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
+                    xycoords='data', color='red') # The range-of-interest start time
+                self.graph.plot(
+                    (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
+                    (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
+                    'r')
+                self.graph.annotate(
+                    str(df_xslice[rng_ee-1]),
+                    xy=(df_xslice[rng_ee-1], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
+                    xycoords='data', color='red') # The range of interest end time
+                
+                logbook_start = self.__nearest(range_start, self.logbook_df["Time"])
+                logbook_end = self.__nearest(range_end, self.logbook_df["Time"])
+                logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start].index[0]
+                logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
+                logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
+                
+                v = 0
+                avg_comments = []
+                for timestamp in logbook_slice["Time"]:
+                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
+                        self.canvas.annotate(
+                            timestamp, 
+                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
+                            xycoords='figure pixels', color="green") 
+                        avg_comments.append(v)
+                    else:
+                        self.canvas.annotate(
+                            timestamp, 
+                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
+                            xycoords='figure pixels')
+                    v += 1
+                self.graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                self.graph.set_xlabel("Time")
+                self.graph.set_ylabel("Resistance")
+                self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                self.graph.xaxis_date()
+                self.graph.legend(loc='best')
 
-                            ### All of the Data ###
-                            graph.plot(self.df["Time"][rng_start:rng_end],self.df[thermistor][rng_start:rng_end], color="blue", label="Thermometry Data")
-                            ### Plots a line @ (1+0.05)*avg of the graph when the magnet is on ###
-                            graph.plot(data_record_slice["Time"],data_record_slice["State"]*avg*1.05,color='k',label="When the magnet is on")
+            if keywords is not None:
+                v = 0
+                poi = True
+                for comment in logbook_slice["Comment"]: 
+                    have_i_printed = False
+                    if str(comment) in keywords:
+                        self.canvas.annotate(
+                            comment, 
+                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                            xycoords='figure pixels', color='goldenrod')
+                        x_loc = int(self.logbook_df[self.logbook_df["Comment"] == comment].index[0])
+                        self.graph.plot(
+                            self.logbook_df.loc[x_loc, "Time"],
+                            avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
+                            color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
+                        poi = False
+                        have_i_printed = True
+                    if v in avg_comments and not have_i_printed:
+                        for index in avg_comments:
+                            if v == index:
+                                self.canvas.annotate(
+                                    comment, 
+                                    xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                    xycoords='figure pixels', color='green')
+                            have_i_printed = True
+                    elif not have_i_printed:
+                        self.canvas.annotate(
+                            comment, 
+                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                            xycoords='figure pixels')
+                        have_i_printed = True
+                    v += 1
+                del v
+                
 
-                            ### Average Dashed Line ###
-                            graph.plot(
-                                (df_xslice[rng_ss],df_xslice[rng_ee-1]),
-                                (avg,avg),'g', dashes=[30, 30], label="Average Value of selected Range")
-                            
-                            ### Red Lines ###
-                            graph.plot(
-                                (df_xslice[rng_ss],df_xslice[rng_ss]),
-                                (avg-max(self.df[thermistor][rng_start:rng_end])*0.05,avg+max(self.df[thermistor][rng_start:rng_end])*0.05),
-                                'r')
-                            graph.annotate(
-                                str(df_xslice[rng_ss]),
-                                xy=(df_xslice[rng_ss], avg+max(self.df[thermistor][rng_start:rng_end])*0.053),
-                                xycoords='data', color='red') # The range-of-interest start time
-                            graph.plot(
-                                (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
-                                (avg-max(self.df[thermistor][rng_start:rng_end])*0.05,avg+max(self.df[thermistor][rng_start:rng_end])*0.05),
-                                'r')
-                            graph.annotate(
-                                str(df_xslice[rng_ee-1]),
-                                xy=(df_xslice[rng_ee-1], avg+max(self.df[thermistor][rng_start:rng_end])*0.053),
-                                xycoords='data', color='red') # The range of interest end time
+            plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
+            print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
+            plt.close('all')
+            plt.clf()
+            gc.collect() # You will run out of memory if you do not do this.
+            return True
 
-                            ### Annotations ###
-                            big_fig.annotate(
-                                "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
-                                '\nRange: '+str(rng)+'\nRange length: '+str(d_points)+\
-                                '\nColumn Length: '+str(len(self.df[thermistor])),
-                                xy=(fig_x_basic_info*dpi_val,fig_y_basic_info*dpi_val), 
-                                xycoords='figure pixels')
-                            big_fig.annotate(
-                                self.df["Time"][rng_start],
-                                xy=(fig_x_start_range_data*dpi_val,fig_y_range_data*dpi_val),
-                                xycoords='figure pixels')
-                            big_fig.annotate(
-                                self.df["Time"][rng_end-1],
-                                xy=(fig_x_end_range_data*dpi_val,fig_y_range_data*dpi_val),
-                                xycoords='figure pixels')
-                            big_fig.annotate(
-                                "Logbook comments:",
-                                xy=(fig_x_logbook_comment*dpi_val,fig_y_logbook_comment*dpi_val),
-                                xycoords='figure pixels')
-
-                            ### Save Plot ###
-                            graph.legend(loc='best')
-                            plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-                            print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-                            plt.close('all')
-                            plt.clf()
-                    gc.collect() # You will run out of memory if you do not do this.
-
+                
     def plotting(self, rangeshift=1, nbest=20, range_length=None, dpi_val=5, logbook=True):
         self.load_data()
         self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
