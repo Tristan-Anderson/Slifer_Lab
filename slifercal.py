@@ -61,7 +61,7 @@ class slifercal(object):
         def_name = text[:text.find('=')].strip()
         self.name = def_name
         if processes == 0:
-            self.processes = int(2*multiprocessing.cpu_count()/3)
+            self.processes = int(8*multiprocessing.cpu_count()/10)
         else:
             self.processes = processes
 
@@ -220,16 +220,19 @@ class slifercal(object):
 
     def __load_logbook(self):
         if self.logbook_datafile_location == None:
-            print("No loogbook was used to initalize the instance!\nAssuming filename is \"logbook_data.csv\"")
+            print("No loogbook path was used to initalize the instance!\nAssuming logbook is \"logbook_data.csv\" \nSearching local directory:")
             self.logbook_datafile_location = "logbook_data.csv"
         with open(self.logbook_datafile_location,'r') as f:
             self.logbook_df = pandas.read_csv(f, sep='\t')
         self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
-        print("Data Record File loaded.")
-
+        print("File found. Comments File loaded.")
 
     def __nearest(self, test_val, iterable): # In an interable data-structure, find the nearest to the value presented.
         return min(iterable, key=lambda x: abs(x - test_val))
+
+    def keyword_nearest(self, test_val, iterable, tag):
+        print("Looking for", test_val, "from index", tag, "in df")
+        return [tag, min(iterable, key=lambda x: abs(x - test_val))]
 
     def __range_election(self, rangeshift=1, range_length=None):
         #############################################################
@@ -316,8 +319,16 @@ class slifercal(object):
         print("File loaded.")
         if type(self.df["Time"][1]) == numpy.float64: # If david did not convert time from 1904/12/31 20:00:00, then do the conversion and put it into datetime.
             self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
+        try:
+            self.logbook_df = self.df['Time', "Comment"]
+        except KeyError as e:
+            try:
+                self.df["Comment"]
+            except KeyError as c:
+                print("No comments were provided in the datafile. Searching elsewhere...")
+                self.__load_logbook()
 
-    def __save_top_n_ranges(self, n=10):
+    def find_top_n_ranges(self, n=10):
         ########################################
         """
            This is the self.keeper_data parser 
@@ -340,7 +351,26 @@ class slifercal(object):
                 print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
             self.n_best[thermistor] = calibration_list
 
-    def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
+    def find_keyword_hits(self, keywords):
+        # Find what indicies of logbook_df contain keywords
+        # Map indices of hits to data-set and give them wings about each point.
+        # Pack the above info into a kernel
+        # Remove kernels that have overlapping points within 45 minutes of the center of each point
+        self.__read_data()
+        logbook_indecies = [] # The indicies of the logbook_df that contain keywords
+        for index, row in self.logbook_df.iterrows():
+            if any(x in str(row["Comment"]) for x in keywords):
+                logbook_indecies.append(index)
+        df_nearest_indecies = []
+        with Pool(processes=self.processes) as pool: # I dont even know how long this will take.
+            result_objects = [pool.apply_async(self.keyword_nearest, args=(self.logbook_df.loc[logbook_index, "Time"], self.df["Time"], logbook_index)) for logbook_index in logbook_indecies]
+            pool.close()
+            pool.join()
+        results = [r.get() for r in result_objects if r.get() != False]
+        print(results)
+        exit()
+
+    def __time_since_1904(self,sec): # LabVIEW convienently used seconds from "1 January, 1904" as timestamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
         return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
     
@@ -370,23 +400,31 @@ class slifercal(object):
                 df_times.append((self.df["Time"][i+1]-self.df["Time"][i]).total_seconds())
             self.average_timestep = numpy.mean(df_times)
 
-
     def make_some_graphs(self):
         self.load_data()
         self.__read_data()
         for thermistor in self.keeper_data:
             for temperature in self.keeper_data[thermistor]:
                 for cut, row in self.keeper_data[thermistor][temperature].iterrows():
+                    print(row)
+                    exit()
                     self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])
     
-    def plotting_front_end(self):
-        self.__save_top_n_ranges(n=10)
+    def plot_top_n_ranges(self, n=10, comments=True):
+        self.find_top_n_ranges(n=n)
         for thermistor in self.n_best:
             for temperature in self.n_best[thermistor]:
                 for cut, row in self.n_best[thermistor][temperature].iterrows():
-                    self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])     
+                    self.plotting_module(thermistor, temperature, cut, row, comments=True)     
     
-    def plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=True, dpi_val=150, plotwidth=1000):
+    def plot_keyword_hits(self, keywords):
+        self.find_keyword_hits(self, keywords)
+        for thermistor in self.keyword_hits:
+            for temperature in self.n_best[thermistor]:
+                for cut, row in self.n_best[thermistor][temperature].iterrows():
+                    self.plotting_module(thermistor, temperature, cut, row, comments=True, keywords=keywords)
+
+    def plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=False, dpi_val=150, plotwidth=1000):
         #################################################################################
         """
            This method can be used after load_data. If load_data was not called before
@@ -457,7 +495,11 @@ class slifercal(object):
                     try:
                         self.__load_logbook()
                     except FileNotFoundError:
-                        self.logbook_df = self.df['Time', "Comment"]
+                        try:
+                            self.logbook_df = self.df['Time', "Comment"]
+                        except AttributeError:
+                            print("No comments have been provided in either the logbook_data.csv, or datafile.")
+                            exit()
 
                 self.canvas.annotate(
                     "Logbook comments:",
@@ -585,7 +627,3 @@ class slifercal(object):
             if key != "Time":
                 thermistors[key].calibrate_curve()
 
-
-#class graphing(object)
-#   def __init__(self, dataset, thermistor, comments=None, keywords=None)
-#       Decoupple Logbook data, and keywords from from plotting
