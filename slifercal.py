@@ -365,6 +365,11 @@ class slifercal(object):
             for i in range(1, 10):
                 df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
             self.average_timestep = numpy.mean(df_times)
+        elif type(self.df["Time"][1]) == pandas._libs.tslibs.timestamps.Timestamp:
+            for i in range(1, 10):
+                df_times.append((self.df["Time"][i+1]-self.df["Time"][i]).total_seconds())
+            self.average_timestep = numpy.mean(df_times)
+
 
     def make_some_graphs(self):
         self.load_data()
