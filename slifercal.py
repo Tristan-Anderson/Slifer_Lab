@@ -109,7 +109,7 @@ class slifercal(object):
         if timeit:
             analysisf = time.time()
             plottings = time.time()
-        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
+        self.plotting_front_end()
         if timeit:
             plottingf=time.time()
             update_cals = time.time()
@@ -386,7 +386,7 @@ class slifercal(object):
                 for cut, row in self.n_best[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])     
     
-    def __plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=True, dpi_val=150, plotwidth=1000):
+    def plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=True, dpi_val=150, plotwidth=1000):
         #################################################################################
         """
            This method can be used after load_data. If load_data was not called before
