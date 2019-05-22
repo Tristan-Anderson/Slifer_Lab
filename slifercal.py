@@ -232,7 +232,9 @@ class slifercal(object):
 
     def keyword_nearest(self, test_val, iterable, tag):
         print("Looking for", test_val, "from index", tag, "in df")
-        return [tag, min(iterable, key=lambda x: abs(x - test_val))]
+        nearest_time = min(iterable, key=lambda x: abs(x - test_val))
+        df_index = iterable.index[iterable["Time"]==nearest_time]
+        return [tag, nearest_time, df_index]
 
     def __range_election(self, rangeshift=1, range_length=None):
         #############################################################
