@@ -65,12 +65,6 @@ class slifercal(object):
         else:
             self.processes = processes
 
-    def cal_suite(self, rangeshift=1, n_best=10, range_length=None, dpi_val=150, logbook=True):
-        self.__read_data()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift, range_length=range_length)
-        self.plot_calibration_candidates(n_best=n_best, plot_logbook=logbook, data_record=True, dpi_val=dpi_val, plotwidth=1500)
-
     def __cleandf(self):
         #############################################
         """
@@ -149,7 +143,7 @@ class slifercal(object):
                                             """
         #######################################
         print("Parsing data...")
-        self.thermistor_calibration_points = {}
+        self.n_best = {}
         for thermistor in self.keeper_data:
             for temprange in self.keeper_data[thermistor]:
                 min_std = 100000000000 # God help you if your ranges are this noisy.
@@ -170,7 +164,7 @@ class slifercal(object):
                 if do_i_print:        
                     print("Located flattest", temperature, 
                           "datapoint for thermistor:", thermistor)
-            self.thermistor_calibration_points[thermistor] = calibration_list
+            self.n_best[thermistor] = calibration_list
 
     def load_data(self, file_location=None):
         ###################################################
@@ -268,7 +262,6 @@ class slifercal(object):
         print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
         self.kd_name = 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk'
 
-
     def range_election_metric(self,column_name, rangeshift):
         temp_RT_dict = {}
         temp_LN2_dict = {}
@@ -334,8 +327,8 @@ class slifercal(object):
                            of data.
                                               """
         #########################################
-        print("Parsing parsed data...")
-        self.thermistor_calibration_points = {}
+        print("Searching for n-best...")
+        self.n_best = {}
         for thermistor in self.keeper_data:
             calibration_list = {}
             for temperature in self.keeper_data[thermistor]:
@@ -345,7 +338,7 @@ class slifercal(object):
                     print("No Calibration point present for", thermistor, "in", temperature, " range.")
                     continue
                 print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
-            self.thermistor_calibration_points[thermistor] = calibration_list
+            self.n_best[thermistor] = calibration_list
 
     def __time_since_1904(self,sec): # David for some reason used seconds from "1 January, 1904" for some reason as timestamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
@@ -380,8 +373,15 @@ class slifercal(object):
             for temperature in self.keeper_data[thermistor]:
                 for cut, row in self.keeper_data[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])
-               
-    def plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=True, dpi_val=150, plotwidth=1000):
+    
+    def plotting_front_end(self):
+        self.__save_top_n_ranges(n=10)
+        for thermistor in self.n_best:
+            for temperature in self.n_best[thermistor]:
+                for cut, row in self.n_best[thermistor][temperature].iterrows():
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])     
+    
+    def __plotting_module(self, thermistor, temperature, cut, kernel, keywords=None, comments=True, dpi_val=150, plotwidth=1000):
         #################################################################################
         """
            This method can be used after load_data. If load_data was not called before
@@ -566,11 +566,7 @@ class slifercal(object):
             plt.clf()
             gc.collect() # You will run out of memory if you do not do this.
             return True
-
                 
-    def plotting(self, rangeshift=1, nbest=20, range_length=None, dpi_val=5, logbook=True):
-        self.load_data()
-        self.plot_calibration_candidates(n_best=nbest, dpi_val=dpi_val, plot_logbook=logbook)
 
     def return_dfs(self):
         self.load_data()
