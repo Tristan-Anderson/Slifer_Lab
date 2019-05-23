@@ -418,7 +418,7 @@ class slifercal(object):
                                         avg_bars=True, comments=True)     
     
     def plot_keyword_hits(self, keywords, thermistors=None):
-        self.find_keyword_hits(self, keywords, thermistors=thermistors)
+        self.find_keyword_hits(keywords, thermistors=thermistors)
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
