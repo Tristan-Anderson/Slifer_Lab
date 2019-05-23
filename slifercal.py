@@ -535,7 +535,7 @@ class slifercal(object):
                 if avg_bars is not None:
                     ### Average Dashed Line ###
                     self.graph.plot(
-                        (df_xslice[rng_ss],df_xslice[rng_ee-1]),
+                        (df_xslice[rng_ss],df_xslice[rng_ee]),
                         (avg,avg),'g', dashes=[30, 30], label="Average Value of selected Range")
                     
                     ### Red Lines ###
@@ -552,8 +552,8 @@ class slifercal(object):
                         (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
                         'r')
                     self.graph.annotate(
-                        str(df_xslice[rng_ee-1]),
-                        xy=(df_xslice[rng_ee-1], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
+                        str(df_xslice[rng_ee]),
+                        xy=(df_xslice[rng_ee], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
                         xycoords='data', color='red') # The range of interest end time
                 
                 logbook_start = self.__nearest(range_start, self.logbook_df["Time"])
