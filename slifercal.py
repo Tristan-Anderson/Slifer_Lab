@@ -485,7 +485,7 @@ class slifercal(object):
                     break
             (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
             if kernel[1] == 1:
-                avg = numpy.mean(df_xslice)
+                avg = numpy.mean(df_yslice)
             ### Annotations ###
             self.canvas.annotate(
                 "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
