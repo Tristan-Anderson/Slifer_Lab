@@ -548,7 +548,7 @@ class slifercal(object):
                         xy=(df_xslice[rng_ss], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
                         xycoords='data', color='red') # The range-of-interest start time
                     self.graph.plot(
-                        (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
+                        (df_xslice[rng_ee],df_xslice[rng_ee]),
                         (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
                         'r')
                     self.graph.annotate(
@@ -565,7 +565,7 @@ class slifercal(object):
                 v = 0
                 avg_comments = []
                 for timestamp in logbook_slice["Time"]:
-                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
+                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee]:
                         self.canvas.annotate(
                             timestamp, 
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
