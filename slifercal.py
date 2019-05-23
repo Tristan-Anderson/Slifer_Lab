@@ -87,6 +87,12 @@ class slifercal(object):
         if timeit:
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
+
+    def keyword(self, keywords):
+        self.__read_data()
+        self.__cleandf()
+        self.load_data()
+        self.plot_keyword_hits(keywords)
     
     def __debug_attribute(self, obj):
         ############################################
@@ -366,7 +372,7 @@ class slifercal(object):
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin,range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                kernel_dicts[int(str(result[0]))] = [1, 1, int(str(result[2])), int(str(result[2]))]
+                kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
             self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
 
     def __time_since_1904(self,sec): 
