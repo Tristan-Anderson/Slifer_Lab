@@ -231,12 +231,12 @@ class slifercal(object):
         return min(iterable, key=lambda x: abs(x - test_val))
 
     def keyword_nearest(self, test_val, iterable, tag):
-        print("Looking for", test_val, "from index", tag, "in df")
-        start = time.time()
+        print("Looking for the nearest date to", test_val, "from logbook index", tag, "in raw-data file")
+        #start = time.time()
         nearest_time = min(iterable, key=lambda x: abs(x - test_val))
         df_index = self.df.index[self.df["Time"] == nearest_time]
-        end = time.time()
-        print("Total time", end-start)
+        #end = time.time()
+        #print("Total time", end-start)
         return [tag, nearest_time, df_index]
 
 
@@ -369,7 +369,7 @@ class slifercal(object):
                 about each point.
             - Pack the above info into a kernel
             - Remove kernels that have overlapping points within 
-                45 minutes of the center of each point
+                45 minutes of the center of each point <--- This is an optimization problem that may never come to fruition
                                                                 """
         ###########################################################
         if thermistors is not None:
@@ -378,21 +378,29 @@ class slifercal(object):
         self.keyword_hits = {}
         df_nearest_indecies = []
         logbook_indecies = [] # The indicies of the logbook_df that contain keywords
+        print("Finding Keywords in comments....")
         for index, row in self.logbook_df.iterrows():
             if any(x in str(row["Comment"]) for x in keywords): # If true; we found a keywords
                 logbook_indecies.append(index)
-        
+        print("Keywords Found")
+        print("Asynchronously Parallelising", len(logbook_indecies), "Querries over", len(self.df["Time"]), 
+              "rows.\nExpecting 10k rows/s. Estimated time:", 
+             (len(logbook_indecies)/self.processes**2)*len(self.df["Time"])/(10000), "seconds.")
+        time.sleep(1)
+        start = time.time()
         with Pool(processes=self.processes) as pool: # 20 Seconds per Querry at 3.05 GHz clock-speed.
             result_objects = [pool.apply_async(self.keyword_nearest, args=(self.logbook_df.loc[logbook_index, "Time"], self.df["Time"], logbook_index)) for logbook_index in logbook_indecies]
             pool.close()
             pool.join()
         results = [r.get() for r in result_objects if r.get() != False]
+        end = time.time()
+        print(len(logbook_indecies), "Querries completed in", end-start, "seconds.")
 
         
         for thermistor in self.thermistor_names: # Creating Kernels here.
-            kernel_dicts = {} #[std, avg, range_begin,range_end]
+            kernel_dicts = {} # [std, avg, range_begin,range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                kernel_dicts[logbook_index] = [1, 1, data_file_index, data_file_index]
+                kernel_dicts[logbook_index] = [1, 1, result[2], result[2]]
 
             self.keyword_hits[thermistor] = {"KEYWORD":kernel_dicts}
 
