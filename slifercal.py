@@ -400,7 +400,7 @@ class slifercal(object):
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin,range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                kernel_dicts[logbook_index] = [1, 1, result[2], result[2]]
+                kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
 
             self.keyword_hits[thermistor] = {"KEYWORD":kernel_dicts}
 
