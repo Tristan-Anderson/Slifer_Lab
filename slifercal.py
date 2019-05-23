@@ -372,7 +372,6 @@ class slifercal(object):
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin,range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                print(result)
                 kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
             self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
 
@@ -497,7 +496,7 @@ class slifercal(object):
                 xy=(fig_x_start_range_data*dpi_val,fig_y_range_data*dpi_val),
                 xycoords='figure pixels')
             self.canvas.annotate(
-                self.df["Time"][rng_end-1],
+                self.df["Time"][rng_end],
                 xy=(fig_x_end_range_data*dpi_val,fig_y_range_data*dpi_val),
                 xycoords='figure pixels')
 
