@@ -468,28 +468,28 @@ class slifercal(object):
             self.fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
             self.canvas = self.fig.add_subplot(111)
             std = kernel[0]
-            if kernel[1] != 1:
-                avg = kernel[1]
+            avg = kernel[1]
             rng = [kernel[2],kernel[3]]
             nth_range = cut
             (rng_start, rng_end) = (rng[0], rng[1])
             (rng_ss,rng_ee) = (rng_start, rng_end)
             d_points = rng[1]-rng[0]
-            while rng_start > 0:
+
+            while rng_start > 0: # Provides wings about to the region to the left
                 if abs(rng_ss - rng_start) <= wing_width and rng_start > 0:
                     rng_start -= 1
                 else:
                     break
-            while rng_end > 0:
+            while rng_end > 0: # Provides wings about the region to the right.
                 if abs(rng_ee - rng_end) <= wing_width and rng_end < len(self.df["Time"]):
                     rng_end += 1
                 else:
                     break
-            if keywords is not None:
-            	rng_ee += 1
             (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
-            if kernel[1] == 1:
+            if kernel[1] == 1: # So we get meaningful results.
                 avg = numpy.mean(df_yslice)
+                std = numpy.std(df_yslice)
+                rng_ee += 1
             ### Annotations ###
             self.canvas.annotate(
                 "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
@@ -536,7 +536,7 @@ class slifercal(object):
                 self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
 
                 ### All of the Data ###
-                self.graph.plot(self.df.loc[rng_start:rng_end, "Time"],self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
+                self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
                 
                 if avg_bars is not None:
                     ### Average Dashed Line ###
@@ -564,8 +564,8 @@ class slifercal(object):
                 
                 logbook_start = self.__nearest(range_start, self.logbook_df["Time"])
                 logbook_end = self.__nearest(range_end, self.logbook_df["Time"])
-                logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start].index[0]
-                logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
+                logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start][0]
+                logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end][0]
                 logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
                 
                 v = 0
