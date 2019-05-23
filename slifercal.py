@@ -394,7 +394,10 @@ class slifercal(object):
             pool.join()
         results = [r.get() for r in result_objects if r.get() != False]
         end = time.time()
-        print(len(logbook_indecies), "Querries completed in", end-start, "seconds.")
+        print(
+            len(logbook_indecies), "Querries completed in", end-start, "seconds.\n",
+            "Estimated", (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000),
+            "seconds. Predicted within", ((end-start)/((len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000)) - 1)*100, "%")
 
         
         for thermistor in self.thermistor_names: # Creating Kernels here.
