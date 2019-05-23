@@ -372,7 +372,7 @@ class slifercal(object):
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin,range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
+                kernel_dicts[result.index[0]] = [1, 1, result.index[2], result.index[2]]
             self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
 
     def __time_since_1904(self,sec): 
