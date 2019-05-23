@@ -466,7 +466,8 @@ class slifercal(object):
             self.fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
             self.canvas = self.fig.add_subplot(111)
             std = kernel[0]
-            avg = kernel[1]
+            if kernel[1] != 1:
+                avg = kernel[1]
             rng = [kernel[2],kernel[3]]
             nth_range = cut
             (rng_start, rng_end) = (rng[0], rng[1])
@@ -483,7 +484,8 @@ class slifercal(object):
                 else:
                     break
             (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
-
+            if kernel[1] == 1:
+                avg = numpy.mean(df_xslice)
             ### Annotations ###
             self.canvas.annotate(
                 "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
