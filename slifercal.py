@@ -315,6 +315,7 @@ class slifercal(object):
             self.n_best[thermistor] = calibration_list
 
     def find_keyword_hits(self, keywords, thermistors=None):
+
         #############################################################
         """ 
             Finds what indicies of the logbook_df contain keywords
@@ -366,9 +367,8 @@ class slifercal(object):
             kernel_dicts = {} # [std, avg, range_begin,range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
                 kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
-
-            self.keyword_hits[thermistor] = {"KEYWORD":kernel_dicts}
-
+            self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dictsorient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
+            
     def __time_since_1904(self,sec): 
         # LabVIEW convienently used seconds from "1 January, 1904" as timestamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
