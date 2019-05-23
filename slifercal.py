@@ -564,8 +564,8 @@ class slifercal(object):
                 
                 logbook_start = self.__nearest(range_start, self.logbook_df["Time"])
                 logbook_end = self.__nearest(range_end, self.logbook_df["Time"])
-                logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start][0]
-                logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end][0]
+                logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start].index[0]
+                logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
                 logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
                 
                 v = 0
