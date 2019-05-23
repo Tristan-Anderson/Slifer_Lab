@@ -432,7 +432,7 @@ class slifercal(object):
                                         thermistor, temperature, cut, row, comments=True,
                                         keywords=keywords, wing_width=1000)
 
-    def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=None, comments=False, dpi_val=150, wing_width=1000):
+    def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=None, comments=None, dpi_val=150, wing_width=1000):
         #################################################################################
         """
            This takes some basic information in the form of its arguments, and with a 
@@ -582,7 +582,10 @@ class slifercal(object):
                 self.graph.set_ylabel("Resistance")
                 self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
                 self.graph.xaxis_date()
-                self.graph.legend(loc='best')
+                if keywords is not None:
+                    pass
+                else:
+                    self.graph.legend(loc='best')
 
             if keywords is not None:
                 v = 0
@@ -617,6 +620,7 @@ class slifercal(object):
                         have_i_printed = True
                     v += 1
                 del v
+                self.graph.legend(loc='best')
                 
 
             plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
