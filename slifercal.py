@@ -24,33 +24,6 @@ def what_temperature_range_are_we_in(average,column_name):
                 return 2
 
 class slifercal(object):
-    """
-    This class is meant to be used in Python's Programming / Interactive mode on a command line.
-
-    ON INITALIZATION:
-        The objective of this class was to create a persistance thermistor calibration program using pickle as the I/O. The user can initalize the class with
-            a datafile location (datafile_location) but providing a datafile location is not necessary to create an instance of this class. All the class does when 
-            initalized is take whatever location provided, and store it as a self variable. Nothing more.
-        
-        The flexibility in the initalization allows for a user to specify or load a previously parsed version of data that was analyzied in the methods of the class
-        described below:
-    METHODS:
-        load_previous_data(data_location=None):
-            This method searches for a "keeper_data_original_YYYY_MM_DD_HHMMSS.pk" where Y, M, D, H, M, S is the year, month, day, hour, minute, and second respectively
-                specifying the file's time of generation. By default it will search for the most recent "keeper_data_original" file. One does not have to provide a file
-                name or location so long as the name of the file remains unchanged.
-        find_calibration_points(range_shift=1):
-            This will read the datafile provided during the initalization. If no file was provided, it will prompt of the location one. It will take several minutes to calculate the
-                calibration points. The program should update you wehre it is in the process.
-            This method works by looking at one column of data at a time, and by taking a slice of data out of the column. The program then calculates the average value within that
-                slice of data, and calculates its standard deviation. This information, including the range in which the slice originated in is saved, and then is written to a
-                dictionary. This dictionary of standard deviations, averages, and ranges is then further analyzed and each column has 3 range-averages selected from the dictioanry 
-                (CALIBRATION POINTS) with the smallest standard deviation. It then writes the calibration points dictionary, as well as the dictioanry with averages and ranges to a
-                binary pickle file.
-            PARAMETERS:
-                range_shift modifies how the slices of data are selected from the datafile. The default is 1, which shifts the range by 1 in the "averaging" section above
-
-    """
     def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, record_location=None):
         register_matplotlib_converters() # Calling the calibrate method without this here told me to put this here.
         self.trslat = {0: "RT", 1: "LN2", 2: "LHe"}
@@ -66,11 +39,12 @@ class slifercal(object):
             self.processes = processes
 
     def __cleandf(self):
-        #############################################
+        ################################################
         """
-           Basic data cleaning geared for lab data
-                                                  """
-        #############################################
+           Basic data cleaning geared for thermometry
+                         lab data
+                                                     """
+        ################################################
         indexes_that_are_to_be_deleted = []
         rows_to_be_deleted = []
         for title in self.df:
@@ -94,7 +68,7 @@ class slifercal(object):
                 if name != 'Time' and name not in column:
                     self.df.drop(columns=name)
 
-    def complete(self, timeit, rangeshift=1, n_best=3, range_length=None, dpi_val=200, logbook=True):
+    def complete_keyword(self, timeit, keywords, rangeshift=1, range_length=None):
         if timeit:
             readings = time.time()
         self.__read_data()
@@ -109,62 +83,33 @@ class slifercal(object):
         if timeit:
             analysisf = time.time()
             plottings = time.time()
-        self.plotting_front_end()
+        self.plot_keyword_hits(keywords, thermistors=None)
         if timeit:
             plottingf=time.time()
-            update_cals = time.time()
-        thermistors = {}
-        for name in self.df.columns.values:
-            if name != "Time":
-                thermistors[name] = tp(name, self.kd_name, self.keeper_data[name])
-        for key in thermistors:
-            if key != "Time":
-                thermistors[key].auto_update_calpoint()
-        if timeit:
-            update_calf = time.time()
-            print("\n\nReading:", readingf-readings, "\nCleaning:", cleanf-cleans, "\nAnalyis:", analysisf-analysiss, "\nPlotting:",plottingf-plottings,"\nCals:",update_calf-update_cals)
-
+        print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
+    
     def __debug_attribute(self, obj):
+        ############################################
+        """
+           Prints any attribute you feed it to a
+                          file.
+                                                 """
+        ############################################
         import pprint
         with open("debug.txt", 'w') as fout:
             pprint.pprint(obj, fout)
         print("Printed object to file: debug.txt")
 
     def find_stable_regions(self, rangeshift=1):
+        ##############################################
+        """
+            It analyses data, then saves the data
+                    in kernels for graphing. 
+                                                   """
+        ##############################################
         self.__read_data()
         self.__cleandf()
         self.__range_election(rangeshift=rangeshift)
-
-    def __keeper_data_cleaner(self, do_i_print=True):
-        #######################################
-        """
-            This is a less robust version of 
-                self.__save_top_n_ranges()
-                                            """
-        #######################################
-        print("Parsing data...")
-        self.n_best = {}
-        for thermistor in self.keeper_data:
-            for temprange in self.keeper_data[thermistor]:
-                min_std = 100000000000 # God help you if your ranges are this noisy.
-                for row in self.keeper_data[thermistor][temprange].itertuples(name=None):
-                    std = row[1]
-                    if min_std > std:
-                        min_std = std
-                        slice_number = nth_range
-                try:
-                    calibration_list[temperature] = [
-                        min_std, 
-                        self.keeper_data[thermistor][temperature][slice_numbers][1], 
-                        self.keeper_data[thermistor][temperature][slice_numbers][2]]
-                except:
-                    if do_i_print:
-                        print("No Calibration point present for", thermistor, "in", temperature, " range.")
-                        continue
-                if do_i_print:        
-                    print("Located flattest", temperature, 
-                          "datapoint for thermistor:", thermistor)
-            self.n_best[thermistor] = calibration_list
 
     def load_data(self, file_location=None):
         ###################################################
@@ -227,23 +172,23 @@ class slifercal(object):
         self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
         print("File found. Comments File loaded.")
 
-    def __nearest(self, test_val, iterable): # In an interable data-structure, find the nearest to the value presented.
+    def __nearest(self, test_val, iterable): 
+        # In an interable data-structure, find the nearest to the 
+        # value presented.
         return min(iterable, key=lambda x: abs(x - test_val))
 
     def keyword_nearest(self, test_val, iterable, tag):
+        # Based on the __nearest() method, this does that, 
+        # but returns the critical range information for our kernels.
         print("Looking for the nearest date to", test_val, "from logbook index", tag, "in raw-data file")
-        #start = time.time()
         nearest_time = min(iterable, key=lambda x: abs(x - test_val))
         df_index = self.df.index[self.df["Time"] == nearest_time]
-        #end = time.time()
-        #print("Total time", end-start)
         return [tag, nearest_time, df_index]
-
 
     def __range_election(self, rangeshift=1, range_length=None):
         #############################################################
         """
-           This is the 'brawns' of the program. This method slices
+                            This method slices
            data in self.df, skips the slice if there are any zero 
            vals the the slice. Then takes the files average, std,
            and assigns it a "Temperature range" based on ballpark
@@ -272,6 +217,15 @@ class slifercal(object):
         self.kd_name = 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk'
 
     def range_election_metric(self,column_name, rangeshift):
+        #####################################################
+        """
+            Parallelizable function that is called once
+            per column of data that searches through that
+            column for a pattern. In this case, it looks
+            for regions of data that that are 'flat' by
+                    their standard deviation
+                                                          """
+        #####################################################
         temp_RT_dict = {}
         temp_LN2_dict = {}
         temp_LHe_dict = {}
@@ -315,6 +269,7 @@ class slifercal(object):
             return keeper_data
 
     def __read_data(self):
+        # Reads in the raw data, and find comments that goes with it.
         self.thermistor_names = []
         if self.datafile_location == None:
             print(
@@ -339,15 +294,13 @@ class slifercal(object):
                 self.thermistor_names.append(column)
 
     def find_top_n_ranges(self, n=10):
-        ########################################
+        ###############################################################
         """
-           This is the self.keeper_data parser 
-           that sorts through self.keeper_data
-           and creates a new dictionary con-
-           taining the n most stable regions 
-                           of data.
-                                              """
-        #########################################
+           This is the self.keeper_data parser that sorts through 
+           self.keeper_data and creates a new dictionary containing 
+                     the n most stable regions of data.
+                                                                    """
+        ###############################################################
         print("Searching for n-best...")
         self.n_best = {}
         for thermistor in self.keeper_data:
@@ -362,43 +315,52 @@ class slifercal(object):
             self.n_best[thermistor] = calibration_list
 
     def find_keyword_hits(self, keywords, thermistors=None):
-        ###########################################################
+        #############################################################
         """ 
-            - Find what indicies of logbook_df contain keywords
-            - Map indices of hits to data-set and give them wings 
-                about each point.
-            - Pack the above info into a kernel
+            Finds what indicies of the logbook_df contain keywords
+            then map indices of hits to data-set. Packs those into
+            a kernel for graphing.
             - Remove kernels that have overlapping points within 
-                45 minutes of the center of each point <--- This is an optimization problem that may never come to fruition
-                                                                """
-        ###########################################################
+                45 minutes of the center of each point
+                (This is an optimization problem that may 
+                never come to fruition)
+                                                                   """
+        ##############################################################
         if thermistors is not None:
             self.thermistor_names = thermistors
         self.__read_data()
         self.keyword_hits = {}
         df_nearest_indecies = []
         logbook_indecies = [] # The indicies of the logbook_df that contain keywords
+        
         print("Finding Keywords in comments....")
         for index, row in self.logbook_df.iterrows():
             if any(x in str(row["Comment"]) for x in keywords): # If true; we found a keywords
                 logbook_indecies.append(index)
         print("Keywords Found")
-        print("Asynchronously Parallelising", len(logbook_indecies), "Querries over", len(self.df["Time"]), 
+        
+        print(
+              "Asynchronously Parallelising", len(logbook_indecies),
+              "Querries over", len(self.df["Time"]), 
               "rows.\nExpecting 10k rows/s. Estimated time:", 
-             (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000), "seconds.")
+              (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000), "seconds.\n\n")
         time.sleep(1)
+        
         start = time.time()
-        with Pool(processes=self.processes) as pool: # 20 Seconds per Querry at 3.05 GHz clock-speed.
-            result_objects = [pool.apply_async(self.keyword_nearest, args=(self.logbook_df.loc[logbook_index, "Time"], self.df["Time"], logbook_index)) for logbook_index in logbook_indecies]
+        with Pool(processes=self.processes) as pool: # ~20 Seconds per Querry at 3.05 GHz clock-speed.
+            result_objects = [pool.apply_async(
+                              self.keyword_nearest, 
+                              args=(self.logbook_df.loc[logbook_index, "Time"],
+                              self.df["Time"], logbook_index)) for logbook_index in logbook_indecies]
             pool.close()
             pool.join()
         results = [r.get() for r in result_objects if r.get() != False]
         end = time.time()
+        
         print(
-            len(logbook_indecies), "Querries completed in", end-start, "seconds.\n",
+            "\n\n",len(logbook_indecies), "Querries completed in", end-start, "seconds.\n",
             "Estimated", (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000),
-            "seconds. Predicted within", ((end-start)/((len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000)) - 1)*100, "%")
-
+            "seconds. Prediction within", ((end-start)/((len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000)) - 1)*100, "percent of measured value.")
         
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin,range_end]
@@ -407,21 +369,21 @@ class slifercal(object):
 
             self.keyword_hits[thermistor] = {"KEYWORD":kernel_dicts}
 
-
-    def __time_since_1904(self,sec): # LabVIEW convienently used seconds from "1 January, 1904" as timestamp.
+    def __time_since_1904(self,sec): 
+        # LabVIEW convienently used seconds from "1 January, 1904" as timestamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
         return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
     
     def __time_steps_suck(self):
-        ###################################
+        ######################################
         """
            This will find the average
            timestep in between the first
            10 datapoints, and use that 
-           to search "Hour long slices" 
+           to search hour(ish) long slices
                    of the data.
-                                        """
-        ###################################
+                                           """
+        ######################################
         df_times = []
         diff_times = []
         if type(self.df["Time"][1]) == str:
@@ -444,8 +406,6 @@ class slifercal(object):
         for thermistor in self.keeper_data:
             for temperature in self.keeper_data[thermistor]:
                 for cut, row in self.keeper_data[thermistor][temperature].iterrows():
-                    print(row)
-                    exit()
                     self.plotting_module(thermistor, temperature, cut, row, keywords=["waves", "mm", "microwaves", "vna"])
     
     def plot_top_n_ranges(self, n=10, comments=True):
@@ -457,8 +417,8 @@ class slifercal(object):
                                         thermistor, temperature, cut, row,
                                         avg_bars=True, comments=True)     
     
-    def plot_keyword_hits(self, keywords):
-        self.find_keyword_hits(self, keywords)
+    def plot_keyword_hits(self, keywords, thermistors=None):
+        self.find_keyword_hits(self, keywords, thermistors=thermistors)
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
@@ -469,15 +429,19 @@ class slifercal(object):
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=None, comments=False, dpi_val=150, wing_width=1000):
         #################################################################################
         """
-           This method can be used after load_data. If load_data was not called before
-               the execution of this method, this method will assume that you have
-           "data.csv" in the same directory in which you are executing this file from.
-           This method generates the n-best stable regions based on the metric defined
-           in the class instance in which self.keeper_data was generated. No detection
-                                will be implemented in the future.
+           This takes some basic information in the form of its arguments, and with a 
+           kernel in the form of:
+                        [Average, Standard Deviation, Range Start, Range End] 
+            And generates a graph with that information. Arguments: dpi_val and
+            wing_width effect that of the graph. Everything should take care of itself,
+
+                                Please proceed formally.
+
+            Valid combinations of optional arguments are:
+                - avg_bars = True, keywords=None, comments=True
+                - avg_bars = None, keywords=[List of keywords], comments = True
                                                                                       """
         #################################################################################
-        # STRUCTURE: thermistor_calibration_points = [Thermistor][Temperature][0:2] = [Minimum STD, average, [slice_start, slice_end]]
         fig_x_dim = 32
         fig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim
@@ -656,7 +620,6 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
                 
-
     def return_dfs(self):
         self.load_data()
         self.__read_data()
