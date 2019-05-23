@@ -188,7 +188,7 @@ class slifercal(object):
         # but returns the critical range information for our kernels.
         print("Looking for the nearest date to", test_val, "from logbook index", tag, "in raw-data file")
         nearest_time = min(iterable, key=lambda x: abs(x - test_val))
-        df_index = self.df.index[self.df["Time"] == nearest_time]
+        df_index = self.df.index[self.df["Time"] == nearest_time][0]
         return [tag, nearest_time, df_index]
 
     def __range_election(self, rangeshift=1, range_length=None):
