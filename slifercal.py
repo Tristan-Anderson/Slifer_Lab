@@ -594,7 +594,39 @@ class slifercal(object):
                     self.graph.legend(loc='best')
 
             if keywords is not None:
+                poi = True
                 v = 0
+                for index, row in self.logbook_df.iterrows():
+                    have_i_printed = False
+                    if any(x in str(row["Comment"]) for x in keywords):
+                        self.canvas.annotate(
+                            comment, 
+                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                            xycoords='figure pixels', color='goldenrod')
+                        x_loc = int(self.logbook_df[self.logbook_df["Comment"] == comment][0])
+                        self.graph.plot(
+                            self.logbook_df.loc[x_loc, "Time"],
+                            avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
+                            color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
+                        poi = False
+                        have_i_printed = True
+                    if v in avg_comments and not have_i_printed:
+                        for index in avg_comments:
+                            if v == index:
+                                self.canvas.annotate(
+                                    comment, 
+                                    xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                    xycoords='figure pixels', color='green')
+                            have_i_printed = True
+                    elif not have_i_printed:
+                        self.canvas.annotate(
+                            comment, 
+                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                            xycoords='figure pixels')
+                        have_i_printed = True
+                    v += 1
+                del v
+                """v = 0
                 poi = True
                 for comment in logbook_slice["Comment"]: 
                     have_i_printed = False
@@ -625,7 +657,7 @@ class slifercal(object):
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
-                del v
+                del v"""
                 self.graph.legend(loc='best')
                 
 
