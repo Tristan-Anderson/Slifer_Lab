@@ -385,7 +385,7 @@ class slifercal(object):
         print("Keywords Found")
         print("Asynchronously Parallelising", len(logbook_indecies), "Querries over", len(self.df["Time"]), 
               "rows.\nExpecting 10k rows/s. Estimated time:", 
-             (len(logbook_indecies)/self.processes**2)*len(self.df["Time"])/(10000), "seconds.")
+             (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000), "seconds.")
         time.sleep(1)
         start = time.time()
         with Pool(processes=self.processes) as pool: # 20 Seconds per Querry at 3.05 GHz clock-speed.
