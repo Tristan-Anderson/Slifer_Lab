@@ -335,8 +335,7 @@ class slifercal(object):
                 never come to fruition)
                                                                    """
         ##############################################################
-        if thermistors is not None:
-            self.thermistor_names = thermistors
+        
         self.__read_data()
         self.keyword_hits = {}
         df_nearest_indecies = []
@@ -354,7 +353,10 @@ class slifercal(object):
               "rows.\nExpecting 10k rows/s. Estimated time:", 
               (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000), "seconds.\n\n")
         time.sleep(1)
-        
+
+        if thermistors is not None:
+            self.thermistor_names = thermistors
+            
         start = time.time()
         with Pool(processes=self.processes) as pool: # ~20 Seconds per Querry at 3.05 GHz clock-speed.
             result_objects = [pool.apply_async(
