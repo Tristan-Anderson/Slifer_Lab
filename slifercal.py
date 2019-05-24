@@ -356,7 +356,7 @@ class slifercal(object):
 
         if thermistors is not None:
             self.thermistor_names = thermistors
-            
+
         start = time.time()
         with Pool(processes=self.processes) as pool: # ~20 Seconds per Querry at 3.05 GHz clock-speed.
             result_objects = [pool.apply_async(
@@ -601,17 +601,18 @@ class slifercal(object):
                 for index, row in logbook_slice.iterrows():
                     have_i_printed = False
                     if any(x in str(row["Comment"]) for x in keywords):
-                        self.canvas.annotate(
-                            row["Comment"], 
-                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                            xycoords='figure pixels', color='goldenrod')
-                        x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
-                        self.graph.plot(
-                            self.logbook_df.loc[x_loc, "Time"],
-                            avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
-                            color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
-                        poi = False
-                        have_i_printed = True
+                        if df_xslice[rng_ss] <= row["Time"] and row["Time"] <= df_xslice[rng_ee]: 
+                            self.canvas.annotate(
+                                row["Comment"], 
+                                xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                xycoords='figure pixels', color='goldenrod')
+                            x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
+                            self.graph.plot(
+                                self.logbook_df.loc[x_loc, "Time"],
+                                avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
+                                color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
+                            poi = False
+                            have_i_printed = True
                     if v in avg_comments and not have_i_printed:
                         for index in avg_comments:
                             if v == index:
