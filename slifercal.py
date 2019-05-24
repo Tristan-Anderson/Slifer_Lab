@@ -600,10 +600,10 @@ class slifercal(object):
                     have_i_printed = False
                     if any(x in str(row["Comment"]) for x in keywords):
                         self.canvas.annotate(
-                            comment, 
+                            row["Comment"], 
                             xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                             xycoords='figure pixels', color='goldenrod')
-                        x_loc = int(self.logbook_df[self.logbook_df["Comment"] == comment][0])
+                        x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]][0])
                         self.graph.plot(
                             self.logbook_df.loc[x_loc, "Time"],
                             avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
@@ -614,13 +614,13 @@ class slifercal(object):
                         for index in avg_comments:
                             if v == index:
                                 self.canvas.annotate(
-                                    comment, 
+                                    row["Comment"], 
                                     xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                                     xycoords='figure pixels', color='green')
                             have_i_printed = True
                     elif not have_i_printed:
                         self.canvas.annotate(
-                            comment, 
+                            row["Comment"], 
                             xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                             xycoords='figure pixels')
                         have_i_printed = True
