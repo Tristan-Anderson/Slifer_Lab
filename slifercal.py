@@ -596,7 +596,7 @@ class slifercal(object):
             if keywords is not None:
                 poi = True
                 v = 0
-                for index, row in self.logbook_df.iterrows():
+                for index, row in logbook_slice.iterrows():
                     have_i_printed = False
                     if any(x in str(row["Comment"]) for x in keywords):
                         self.canvas.annotate(
