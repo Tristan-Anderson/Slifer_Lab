@@ -88,11 +88,11 @@ class slifercal(object):
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
 
-    def keyword(self, keywords):
+    def keyword(self, keywords, thermistors=None):
         self.__read_data()
         self.__cleandf()
         self.load_data()
-        self.plot_keyword_hits(keywords)
+        self.plot_keyword_hits(keywords, thermistors=thermistors)
     
     def __debug_attribute(self, obj):
         ############################################
