@@ -324,7 +324,7 @@ class slifercal(object):
 
         #############################################################
         """ 
-            Finds what indicies of the logbook_df contain keywords
+            Finds what indices of the logbook_df contain keywords
             then map indices of hits to data-set. Packs those into
             a kernel for graphing.
             - Remove kernels that have overlapping points within 
@@ -337,37 +337,37 @@ class slifercal(object):
             self.thermistor_names = thermistors
         self.__read_data()
         self.keyword_hits = {}
-        df_nearest_indecies = []
-        logbook_indecies = [] # The indicies of the logbook_df that contain keywords
+        df_nearest_indices = []
+        logbook_indices = [] # The indices of the logbook_df that contain keywords
         
         print("Finding Keywords in comments....")
         for index, row in self.logbook_df.iterrows():
             if any(x in str(row["Comment"]) for x in keywords): # If true; we found a keywords
-                logbook_indecies.append(index)
+                logbook_indices.append(index)
         print("Keywords Found")
         
         print(
-              "Asynchronously Parallelising", len(logbook_indecies),
-              "Querries over", len(self.df["Time"]), 
+              "Asynchronously Parallelizing", len(logbook_indices),
+              "Queries over", len(self.df["Time"]), 
               "rows.\nExpecting 10k rows/s. Estimated time:", 
-              (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000), "seconds.\n\n")
+              (len(logbook_indices)/self.processes)*len(self.df["Time"])/(10000), "seconds.\n\n")
         time.sleep(1)
         
         start = time.time()
-        with Pool(processes=self.processes) as pool: # ~20 Seconds per Querry at 3.05 GHz clock-speed.
+        with Pool(processes=self.processes) as pool: # ~20 Seconds per Query at 3.05 GHz clock-speed.
             result_objects = [pool.apply_async(
                               self.keyword_nearest, 
                               args=(self.logbook_df.loc[logbook_index, "Time"],
-                              self.df["Time"], logbook_index)) for logbook_index in logbook_indecies]
+                              self.df["Time"], logbook_index)) for logbook_index in logbook_indices]
             pool.close()
             pool.join()
         results = [r.get() for r in result_objects if r.get() != False]
         end = time.time()
         
         print(
-            "\n\n",len(logbook_indecies), "Querries completed in", end-start, "seconds.\n",
-            "Estimated", (len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000),
-            "seconds. Prediction within", ((end-start)/((len(logbook_indecies)/self.processes)*len(self.df["Time"])/(10000)) - 1)*100, "percent of measured value.")
+            "\n\n",len(logbook_indices), "Queries completed in", end-start, "seconds.\n",
+            "Estimated", (len(logbook_indices)/self.processes)*len(self.df["Time"])/(10000),
+            "seconds. Prediction within", ((end-start)/((len(logbook_indices)/self.processes)*len(self.df["Time"])/(10000)) - 1)*100, "percent of measured value.")
         
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin,range_end]
@@ -376,7 +376,7 @@ class slifercal(object):
             self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
 
     def __time_since_1904(self,sec): 
-        # LabVIEW convienently used seconds from "1 January, 1904" as timestamp.
+        # LabVIEW conveniently used seconds from "1 January, 1904" as time-stamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
         return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
     
@@ -384,8 +384,8 @@ class slifercal(object):
         ######################################
         """
            This will find the average
-           timestep in between the first
-           10 datapoints, and use that 
+           time step in between the first
+           10 data-points, and use that 
            to search hour(ish) long slices
                    of the data.
                                            """
@@ -486,6 +486,7 @@ class slifercal(object):
             (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
             if kernel[1] == 1:
                 avg = numpy.mean(df_yslice)
+
             ### Annotations ###
             self.canvas.annotate(
                 "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
@@ -514,6 +515,8 @@ class slifercal(object):
                         except AttributeError:
                             print("No comments have been provided in either the logbook_data.csv, or datafile.")
                             exit()
+
+
                 self.canvas.annotate(
                     "Logbook comments:",
                     xy=(fig_x_logbook_comment*dpi_val,fig_y_logbook_comment*dpi_val),
@@ -532,8 +535,12 @@ class slifercal(object):
                 self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
 
                 ### All of the Data ###
-                self.graph.plot(self.df.loc[rng_start:rng_end, "Time"],self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
-                
+                xcut = self.df.loc[rng_start:rng_end, "Time"]
+                ycut = self.df.loc[rng_start:rng_end, thermistor]
+                if xcut and ycut is not None:
+                	self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
+                else:
+                	return False
                 if avg_bars is not None:
                     ### Average Dashed Line ###
                     self.graph.plot(
@@ -643,4 +650,3 @@ class slifercal(object):
         for key in thermistors:
             if key != "Time":
                 thermistors[key].calibrate_curve()
-
