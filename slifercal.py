@@ -466,7 +466,7 @@ class slifercal(object):
         fig_y_step_timestamp = (.15/18)*fig_y_dim
         fig_x_comment_start = (2/16)*fig_x_dim
 
-        if kernel[1] > 0 and cut in [3, 19, 857]:
+        if kernel[1] > 0:
             self.fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
             self.canvas = self.fig.add_subplot(111)
             std = kernel[0]
@@ -542,11 +542,10 @@ class slifercal(object):
 
                 
                 ycut = self.df.loc[rng_start:rng_end, thermistor]
-                print("\n\n\n", ycut)
-                print("Length:", len(ycut))
-                if not ycut.empty:
+
+                if len(ycut) > 1:
                 	### All of the Data ###
-                	self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
+                	self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], ycut, color="blue", label="Data")
                 else:
                 	return False
 
