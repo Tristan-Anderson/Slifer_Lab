@@ -88,11 +88,11 @@ class slifercal(object):
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
 
-    def keyword(self, keywords):
+    def keyword(self, keywords, thermistors=None):
         self.__read_data()
         self.__cleandf()
         self.load_data()
-        self.plot_keyword_hits(keywords)
+        self.plot_keyword_hits(keywords, thermistors=thermistors)
     
     def __debug_attribute(self, obj):
         ############################################
@@ -308,6 +308,8 @@ class slifercal(object):
                                                                     """
         ###############################################################
         print("Searching for n-best...")
+        self.load_data()
+        self.__read_data()
         self.n_best = {}
         for thermistor in self.keeper_data:
             calibration_list = {}
@@ -333,8 +335,7 @@ class slifercal(object):
                 never come to fruition)
                                                                    """
         ##############################################################
-        if thermistors is not None:
-            self.thermistor_names = thermistors
+        
         self.__read_data()
         self.keyword_hits = {}
         df_nearest_indices = []
@@ -352,7 +353,10 @@ class slifercal(object):
               "rows.\nExpecting 10k rows/s. Estimated time:", 
               (len(logbook_indices)/self.processes)*len(self.df["Time"])/(10000), "seconds.\n\n")
         time.sleep(1)
-        
+
+        if thermistors is not None:
+            self.thermistor_names = thermistors
+
         start = time.time()
         with Pool(processes=self.processes) as pool: # ~20 Seconds per Query at 3.05 GHz clock-speed.
             result_objects = [pool.apply_async(
@@ -466,26 +470,28 @@ class slifercal(object):
             self.fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
             self.canvas = self.fig.add_subplot(111)
             std = kernel[0]
-            if kernel[1] != 1:
-                avg = kernel[1]
+            avg = kernel[1]
             rng = [kernel[2],kernel[3]]
             nth_range = cut
             (rng_start, rng_end) = (rng[0], rng[1])
             (rng_ss,rng_ee) = (rng_start, rng_end)
             d_points = rng[1]-rng[0]
-            while rng_start > 0:
+
+            while rng_start > 0: # Provides wings about to the region to the left
                 if abs(rng_ss - rng_start) <= wing_width and rng_start > 0:
                     rng_start -= 1
                 else:
                     break
-            while rng_end > 0:
+            while rng_end > 0: # Provides wings about the region to the right.
                 if abs(rng_ee - rng_end) <= wing_width and rng_end < len(self.df["Time"]):
                     rng_end += 1
                 else:
                     break
             (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
-            if kernel[1] == 1:
+            if kernel[1] == 1: # So we get meaningful results.
                 avg = numpy.mean(df_yslice)
+                std = numpy.std(df_yslice)
+                rng_ee += 1
 
             ### Annotations ###
             self.canvas.annotate(
@@ -534,17 +540,19 @@ class slifercal(object):
                 self.graph.set_ylabel("Resistance")
                 self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
 
-                ### All of the Data ###
+                
                 xcut = self.df.loc[rng_start:rng_end, "Time"]
                 ycut = self.df.loc[rng_start:rng_end, thermistor]
                 if xcut and ycut is not None:
+                	### All of the Data ###
                 	self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
                 else:
                 	return False
+
                 if avg_bars is not None:
                     ### Average Dashed Line ###
                     self.graph.plot(
-                        (df_xslice[rng_ss],df_xslice[rng_ee]),
+                        (df_xslice[rng_ss],df_xslice[rng_ee-1]),
                         (avg,avg),'g', dashes=[30, 30], label="Average Value of selected Range")
                     
                     ### Red Lines ###
@@ -557,12 +565,12 @@ class slifercal(object):
                         xy=(df_xslice[rng_ss], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
                         xycoords='data', color='red') # The range-of-interest start time
                     self.graph.plot(
-                        (df_xslice[rng_ee],df_xslice[rng_ee]),
+                        (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
                         (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
                         'r')
                     self.graph.annotate(
-                        str(df_xslice[rng_ee]),
-                        xy=(df_xslice[rng_ee], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
+                        str(df_xslice[rng_ee-1]),
+                        xy=(df_xslice[rng_ee-1], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
                         xycoords='data', color='red') # The range of interest end time
                 
                 logbook_start = self.__nearest(range_start, self.logbook_df["Time"])
@@ -574,7 +582,7 @@ class slifercal(object):
                 v = 0
                 avg_comments = []
                 for timestamp in logbook_slice["Time"]:
-                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee]:
+                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
                         self.canvas.annotate(
                             timestamp, 
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
@@ -597,7 +605,40 @@ class slifercal(object):
                     self.graph.legend(loc='best')
 
             if keywords is not None:
+                poi = True
                 v = 0
+                for index, row in logbook_slice.iterrows():
+                    have_i_printed = False
+                    if any(x in str(row["Comment"]) for x in keywords):
+                        if df_xslice[rng_ss] <= row["Time"] and row["Time"] <= df_xslice[rng_ee]: 
+                            self.canvas.annotate(
+                                row["Comment"], 
+                                xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                xycoords='figure pixels', color='goldenrod')
+                            x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
+                            self.graph.plot(
+                                self.logbook_df.loc[x_loc, "Time"],
+                                avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
+                                color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
+                            poi = False
+                            have_i_printed = True
+                    if v in avg_comments and not have_i_printed:
+                        for index in avg_comments:
+                            if v == index:
+                                self.canvas.annotate(
+                                    row["Comment"], 
+                                    xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                    xycoords='figure pixels', color='green')
+                            have_i_printed = True
+                    elif not have_i_printed:
+                        self.canvas.annotate(
+                            row["Comment"], 
+                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                            xycoords='figure pixels')
+                        have_i_printed = True
+                    v += 1
+                del v
+                """v = 0
                 poi = True
                 for comment in logbook_slice["Comment"]: 
                     have_i_printed = False
@@ -628,7 +669,7 @@ class slifercal(object):
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
-                del v
+                del v"""
                 self.graph.legend(loc='best')
                 
 
