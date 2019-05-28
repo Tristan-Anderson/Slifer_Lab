@@ -543,6 +543,7 @@ class slifercal(object):
                 
                 ycut = self.df.loc[rng_start:rng_end, thermistor]
                 print("\n\n\n", ycut)
+                print("Length:", len(ycut))
                 if not ycut.empty:
                 	### All of the Data ###
                 	self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end, thermistor], color="blue", label="Data")
