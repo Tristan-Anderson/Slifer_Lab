@@ -469,8 +469,8 @@ class slifercal(object):
         fig_x_comment_start = (2/16)*fig_x_dim
 
         if kernel[1] > 0:
-            self.fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
-            self.canvas = self.fig.add_subplot(111)
+            fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
+            canvas = fig.add_subplot(111)
             std = kernel[0]
             avg = kernel[1]
             rng = [kernel[2],kernel[3]]
@@ -496,17 +496,17 @@ class slifercal(object):
                 rng_ee += 1
 
             ### Annotations ###
-            self.canvas.annotate(
+            canvas.annotate(
                 "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
                 '\nRange: '+str(rng)+'\nRange length: '+str(d_points)+\
                 '\nColumn Length: '+str(len(self.df[thermistor])),
                 xy=(fig_x_basic_info*dpi_val,fig_y_basic_info*dpi_val), 
                 xycoords='figure pixels')
-            self.canvas.annotate(
+            canvas.annotate(
                 self.df["Time"][rng_start],
                 xy=(fig_x_start_range_data*dpi_val,fig_y_range_data*dpi_val),
                 xycoords='figure pixels')
-            self.canvas.annotate(
+            canvas.annotate(
                 self.df["Time"][rng_end],
                 xy=(fig_x_end_range_data*dpi_val,fig_y_range_data*dpi_val),
                 xycoords='figure pixels')
@@ -525,52 +525,52 @@ class slifercal(object):
                             exit()
 
 
-                self.canvas.annotate(
+                canvas.annotate(
                     "Logbook comments:",
                     xy=(fig_x_logbook_comment*dpi_val,fig_y_logbook_comment*dpi_val),
                     xycoords='figure pixels')
 
                 (range_start, range_end) = (min(df_xslice), max(df_xslice))
-                self.graph = self.fig.add_subplot(211)
-                self.footnotes = self.fig.add_subplot(212)
-                self.footnotes.axis('off')
-                self.canvas.axis('off')
+                graph = fig.add_subplot(211)
+                footnotes = fig.add_subplot(212)
+                footnotes.axis('off')
+                canvas.axis('off')
 
                 ### Title and Labels ###
-                self.graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                self.graph.set_xlabel("Time")
-                self.graph.set_ylabel("Resistance")
-                self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                graph.set_xlabel("Time")
+                graph.set_ylabel("Resistance")
+                graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
 
                 
                 ycut = self.df.loc[rng_start:rng_end, thermistor]
 
                 if len(ycut) > 1:
                     ### All of the Data ###
-                    self.graph.plot(self.df.loc[rng_start:rng_end, "Time"], ycut, color="blue", label="Data")
+                    graph.plot(self.df.loc[rng_start:rng_end, "Time"], ycut, color="blue", label="Data")
                 else:
                     return False
 
                 if avg_bars is not None:
                     ### Average Dashed Line ###
-                    self.graph.plot(
+                    graph.plot(
                         (df_xslice[rng_ss],df_xslice[rng_ee-1]),
                         (avg,avg),'g', dashes=[30, 30], label="Average Value of selected Range")
                     
                     ### Red Lines ###
-                    self.graph.plot(
+                    graph.plot(
                         (df_xslice[rng_ss],df_xslice[rng_ss]),
                         (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
                         'r')
-                    self.graph.annotate(
+                    graph.annotate(
                         str(df_xslice[rng_ss]),
                         xy=(df_xslice[rng_ss], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
                         xycoords='data', color='red') # The range-of-interest start time
-                    self.graph.plot(
+                    graph.plot(
                         (df_xslice[rng_ee-1],df_xslice[rng_ee-1]),
                         (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
                         'r')
-                    self.graph.annotate(
+                    graph.annotate(
                         str(df_xslice[rng_ee-1]),
                         xy=(df_xslice[rng_ee-1], avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.053),
                         xycoords='data', color='red') # The range of interest end time
@@ -585,26 +585,26 @@ class slifercal(object):
                 avg_comments = []
                 for timestamp in logbook_slice["Time"]:
                     if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
-                        self.canvas.annotate(
+                        canvas.annotate(
                             timestamp, 
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
                             xycoords='figure pixels', color="green") 
                         avg_comments.append(v)
                     else:
-                        self.canvas.annotate(
+                        canvas.annotate(
                             timestamp, 
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
                             xycoords='figure pixels')
                     v += 1
-                self.graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                self.graph.set_xlabel("Time")
-                self.graph.set_ylabel("Resistance")
-                self.graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
-                self.graph.xaxis_date()
+                graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                graph.set_xlabel("Time")
+                graph.set_ylabel("Resistance")
+                graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                graph.xaxis_date()
                 if keywords is not None:
                     pass
                 else:
-                    self.graph.legend(loc='best')
+                    graph.legend(loc='best')
 
             if keywords is not None:
                 poi = True
@@ -613,12 +613,12 @@ class slifercal(object):
                     have_i_printed = False
                     if any(x in str(row["Comment"]) for x in keywords):
                         if df_xslice[rng_ss] <= row["Time"] and row["Time"] <= df_xslice[rng_ee]: 
-                            self.canvas.annotate(
+                            canvas.annotate(
                                 row["Comment"], 
                                 xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                                 xycoords='figure pixels', color='goldenrod')
                             x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
-                            self.graph.plot(
+                            graph.plot(
                                 self.logbook_df.loc[x_loc, "Time"],
                                 avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
                                 color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
@@ -627,20 +627,20 @@ class slifercal(object):
                     if v in avg_comments and not have_i_printed:
                         for index in avg_comments:
                             if v == index:
-                                self.canvas.annotate(
+                                canvas.annotate(
                                     row["Comment"], 
                                     xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                                     xycoords='figure pixels', color='green')
                             have_i_printed = True
                     elif not have_i_printed:
-                        self.canvas.annotate(
+                        canvas.annotate(
                             row["Comment"], 
                             xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
                 del v
-                self.graph.legend(loc='best')
+                graph.legend(loc='best')
                 
 
             plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
