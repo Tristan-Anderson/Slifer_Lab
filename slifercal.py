@@ -618,12 +618,14 @@ class slifercal(object):
                                 xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                                 xycoords='figure pixels', color='goldenrod')
                             x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
-                            graph.plot(
-                                self.logbook_df.loc[x_loc, "Time"],
-                                avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.02, 'ro',
-                                color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
-                            poi = False
-                            have_i_printed = True
+                            logbook_hit_date = self.logbook_df.loc[x_loc, "Time"]
+                            if logbook_hit_date in range(min(df_xslice), max(df_xslice)):
+                                graph.plot(
+                                    logbook_hit_date,
+                                    avg, 'ro',
+                                    color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
+                                poi = False
+                                have_i_printed = True
                     if v in avg_comments and not have_i_printed:
                         for index in avg_comments:
                             if v == index:
