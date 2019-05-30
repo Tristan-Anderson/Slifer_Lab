@@ -583,67 +583,61 @@ class slifercal(object):
                 
                 v = 0
                 avg_comments = []
-                for timestamp in logbook_slice["Time"]:
-                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
-                        canvas.annotate(
-                            timestamp, 
-                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-                            xycoords='figure pixels', color="green") 
-                        avg_comments.append(v)
-                    else:
-                        canvas.annotate(
-                            timestamp, 
-                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-                            xycoords='figure pixels')
-                    v += 1
-                graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                graph.set_xlabel("Time")
-                graph.set_ylabel("Resistance")
-                graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
-                graph.xaxis_date()
-                if keywords is not None:
-                    pass
-                else:
-                    graph.legend(loc='best')
-
-            if keywords is not None:
-                poi = True
-                v = 0
-                for index, row in logbook_slice.iterrows():
-                    have_i_printed = False
-                    if any(x in str(row["Comment"]) for x in keywords):
-                        if df_xslice[rng_ss] <= row["Time"] and row["Time"] <= df_xslice[rng_ee]: 
-                            canvas.annotate(
-                                row["Comment"], 
-                                xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                                xycoords='figure pixels', color='goldenrod')
-                            x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
-                            logbook_hit_date = self.logbook_df.loc[x_loc, "Time"]
-                            if logbook_hit_date in range(min(df_xslice), max(df_xslice)):
+                try:
+                    poi = True
+                    v = 0
+                    for index, row in logbook_slice.iterrows():
+                        have_i_printed = False
+                        if any(x in str(row["Comment"]) for x in keywords):
+                            if row["Time"] in range(min(df_xslice), max(df_xslice)): 
+                                canvas.annotate(
+                                    row["Comment"], 
+                                    xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                    xycoords='figure pixels', color='goldenrod')
+                                x_loc = int(self.logbook_df[self.logbook_df["Comment"] == row["Comment"]].index[0])
+                                logbook_hit_date = self.logbook_df.loc[x_loc, "Time"]
                                 graph.plot(
                                     logbook_hit_date,
                                     avg, 'ro',
                                     color="goldenrod", ms=10, label=("Keyword Hit") if poi else None)
                                 poi = False
                                 have_i_printed = True
-                    if v in avg_comments and not have_i_printed:
-                        for index in avg_comments:
-                            if v == index:
-                                canvas.annotate(
-                                    row["Comment"], 
-                                    xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                                    xycoords='figure pixels', color='green')
+                        if v in avg_comments and not have_i_printed:
+                            for index in avg_comments:
+                                if v == index:
+                                    canvas.annotate(
+                                        row["Comment"], 
+                                        xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                        xycoords='figure pixels', color='green')
+                                have_i_printed = True
+                        elif not have_i_printed:
+                            canvas.annotate(
+                                row["Comment"], 
+                                xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
+                                xycoords='figure pixels')
                             have_i_printed = True
-                    elif not have_i_printed:
-                        canvas.annotate(
-                            row["Comment"], 
-                            xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
-                            xycoords='figure pixels')
-                        have_i_printed = True
-                    v += 1
-                del v
+                        v += 1
+                    del v
+                except TypeError:
+                    for timestamp in logbook_slice["Time"]:
+                        if timestamp in range(min(df_xslice), max(df_xslice)):
+                            canvas.annotate(
+                                timestamp, 
+                                xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
+                                xycoords='figure pixels', color="green") 
+                            avg_comments.append(v)
+                        else:
+                            canvas.annotate(
+                                timestamp, 
+                                xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
+                                xycoords='figure pixels')
+                        v += 1
+                    graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                    graph.set_xlabel("Time")
+                    graph.set_ylabel("Resistance")
+                    graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                    graph.xaxis_date()
                 graph.legend(loc='best')
-                
 
             plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
             print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
