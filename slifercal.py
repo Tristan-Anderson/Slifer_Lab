@@ -429,12 +429,15 @@ class slifercal(object):
     
     def plot_keyword_hits(self, keywords, thermistors=None):
         self.find_keyword_hits(keywords, thermistors=thermistors)
-        for thermistor in self.keyword_hits:
-            for temperature in self.keyword_hits[thermistor]:
-                for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                    self.plotting_module(
-                                        thermistor, temperature, cut, row, comments=True,
-                                        keywords=keywords, wing_width=1000, avg_bars=True)
+        with Pool(processes=self.processes) as pool:
+	        for thermistor in self.keyword_hits:
+	            for temperature in self.keyword_hits[thermistor]:
+	                for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
+	                	pool.apply_async(self.plotting_module, args=(thermistor, temperature, cut, row, comments=True,
+	                                        keywords=keywords, wing_width=1000, avg_bars=True))
+	        pool.close()
+            pool.join()
+	        
 
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=None, comments=None, dpi_val=150, wing_width=1000):
         #################################################################################
