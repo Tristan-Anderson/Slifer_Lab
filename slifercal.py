@@ -433,7 +433,7 @@ class slifercal(object):
             for thermistor in self.keyword_hits:
                 for temperature in self.keyword_hits[thermistor]:
                     for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                        pool.apply_async(self.plotting_module, args=(thermistor, temperature, cut, row, {"keywords":keywords, "comments":True, "wing_width":1000, "avg_bars":True}))
+                        pool.apply_async(self.plotting_module, args=(thermistor, temperature, cut, row), kwds={"keywords":keywords, "comments":True, "wing_width":1000, "avg_bars":True}))
             pool.close()
             pool.join()
             
