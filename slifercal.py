@@ -616,25 +616,25 @@ class slifercal(object):
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
-	                del v
-	                for timestamp in logbook_slice["Time"]:
-	                    if timestamp in range(min(df_xslice), max(df_xslice)):
-	                        canvas.annotate(
-	                            timestamp, 
-	                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-	                            xycoords='figure pixels', color="green") 
-	                        avg_comments.append(v)
-	                    else:
-	                        canvas.annotate(
-	                            timestamp, 
-	                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-	                            xycoords='figure pixels')
-	                    v += 1
-                    graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                    graph.set_xlabel("Time")
-                    graph.set_ylabel("Resistance")
-                    graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
-                    graph.xaxis_date()
+                del v
+                for timestamp in logbook_slice["Time"]:
+                    if timestamp in range(min(df_xslice), max(df_xslice)):
+                        canvas.annotate(
+                            timestamp, 
+                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
+                            xycoords='figure pixels', color="green") 
+                        avg_comments.append(v)
+                    else:
+                        canvas.annotate(
+                            timestamp, 
+                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
+                            xycoords='figure pixels')
+                    v += 1
+                graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+                graph.set_xlabel("Time")
+                graph.set_ylabel("Resistance")
+                graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                graph.xaxis_date()
                 graph.legend(loc='best')
 
             plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
