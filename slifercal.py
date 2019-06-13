@@ -616,7 +616,7 @@ class slifercal(object):
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
-                del v
+                v = 0
                 for timestamp in logbook_slice["Time"]:
                     if timestamp in range(min(df_xslice), max(df_xslice)):
                         canvas.annotate(
