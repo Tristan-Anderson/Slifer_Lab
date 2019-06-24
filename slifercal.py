@@ -429,13 +429,10 @@ class slifercal(object):
     
     def plot_keyword_hits(self, keywords, thermistors=None):
         self.find_keyword_hits(keywords, thermistors=thermistors)
-        with Pool(processes=self.processes) as pool:
-            for thermistor in self.keyword_hits:
-                for temperature in self.keyword_hits[thermistor]:
-                    for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                        pool.apply_async(self.plotting_module, args=(thermistor, temperature, cut, row), kwds={"keywords":keywords, "comments":True, "wing_width":1000, "avg_bars":True})
-            pool.close()
-            pool.join()
+        for thermistor in self.keyword_hits:
+            for temperature in self.keyword_hits[thermistor]:
+                for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, comments=True, wing_width=1000, avg_bars=True)
             
 
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=None, comments=None, dpi_val=150, wing_width=1000):
@@ -630,12 +627,12 @@ class slifercal(object):
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
                             xycoords='figure pixels')
                     v += 1
-                graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-                graph.set_xlabel("Time")
-                graph.set_ylabel("Resistance")
-                graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
-                graph.xaxis_date()
-                graph.legend(loc='best')
+            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+            graph.set_xlabel("Time")
+            graph.set_ylabel("Resistance")
+            graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+            graph.xaxis_date()
+            graph.legend(loc='best')
 
             plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
             print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
