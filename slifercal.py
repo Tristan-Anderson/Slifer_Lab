@@ -585,7 +585,7 @@ class slifercal(object):
                 for index, row in logbook_slice.iterrows():
                     have_i_printed = False
                     if any(x in str(row["Comment"]) for x in keywords):
-                        if row["Time"] in range(min(df_xslice), max(df_xslice)): 
+                        if min(df_xslice) <= row["Time"] and row["Time"] <= max(df_xslice): 
                             canvas.annotate(
                                 row["Comment"], 
                                 xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
@@ -615,7 +615,7 @@ class slifercal(object):
                     v += 1
                 v = 0
                 for timestamp in logbook_slice["Time"]:
-                    if timestamp in range(min(df_xslice), max(df_xslice)):
+                    if min(df_xslice) <= timestamp and timestamp <= max(df_xslice):
                         canvas.annotate(
                             timestamp, 
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
