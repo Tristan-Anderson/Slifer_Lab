@@ -627,6 +627,7 @@ class slifercal(object):
                             xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
                             xycoords='figure pixels')
                     v += 1
+            graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
             graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
             graph.set_xlabel("Time")
             graph.set_ylabel("Resistance")
