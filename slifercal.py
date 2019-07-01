@@ -578,14 +578,31 @@ class slifercal(object):
                 logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
                 logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
                 
-                v = 0
                 avg_comments = []
                 poi = True
                 v = 0
+                n = 0
                 for index, row in logbook_slice.iterrows():
                     print(index, row)
+                    # TODO: Here, I would like to try and combine this loop, with the other loop 
+                    # down below that deals with dating the comments.  If I can combine it, and
+                    # make it simpler, this program will be a lot more readable.
+                    #
                     exit()
+                    timestamp = row["Time"]
                     have_i_printed = False
+                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
+                        canvas.annotate(
+                            timestamp, 
+                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
+                            xycoords='figure pixels', color="green") 
+                        avg_comments.append(n)
+                    else:
+                        canvas.annotate(
+                            timestamp, 
+                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
+                            xycoords='figure pixels')
+                    n += 1
                     if any(x in str(row["Comment"]) for x in keywords):
                         if min(df_xslice) <= row["Time"] and row["Time"] <= max(df_xslice): 
                             canvas.annotate(
@@ -615,20 +632,7 @@ class slifercal(object):
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
-                v = 0
-                for timestamp in logbook_slice["Time"]:
-                    if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
-                        canvas.annotate(
-                            timestamp, 
-                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-                            xycoords='figure pixels', color="green") 
-                        avg_comments.append(v)
-                    else:
-                        canvas.annotate(
-                            timestamp, 
-                            xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val), 
-                            xycoords='figure pixels')
-                    v += 1
+                    
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
             graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
             graph.set_xlabel("Time")
