@@ -463,7 +463,7 @@ class slifercal(object):
         fig_x_timestamp = (0.25/16)*fig_x_dim
         fig_y_anchor_timestamp = (4.1/9)*fig_y_dim
         fig_y_step_timestamp = (.15/18)*fig_y_dim
-        fig_x_comment_start = (1/16)*fig_x_dim
+        fig_x_comment_start = (1.1/16)*fig_x_dim
 
         if kernel[1] > 0:
             fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
