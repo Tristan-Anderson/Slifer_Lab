@@ -614,6 +614,7 @@ class slifercal(object):
                         have_i_printed = True
                     v += 1
                 v = 0
+                logbook_slice["Time"] = pandas.to_datetime(logbook_slice["Time"])
                 for timestamp in logbook_slice["Time"]:
                     if min(df_xslice) <= timestamp and timestamp <= max(df_xslice):
                         canvas.annotate(
