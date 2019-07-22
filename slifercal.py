@@ -516,7 +516,7 @@ class slifercal(object):
 
             if comments is not None:
                 try:
-                	# Load logbook if module has been called prematurely.
+                    # Load logbook if module has been called prematurely.
                     self.logbook_df
                 except:
                     try:
@@ -591,9 +591,8 @@ class slifercal(object):
                 v = 0
                 n = 0
                 for index, row in logbook_slice.iterrows():
-                	row["comment"], y = self.graph_comment_formater(row["Comment"])
-                	
-                	v += y
+                    row["comment"], y = self.graph_comment_formater(row["Comment"])
+                    v += y
                     timestamp = row["Time"]
                     have_i_printed = False
                     if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
@@ -653,19 +652,19 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
 
-	def graph_comment_formater(self, comment):
-		# MAX COLUMN LENGTh 55
-		ls = list(comment)
-		n = 1
-		for element in range(0, len(ls)):
-			if element % 35 == 0 and element != 0:
-				if re.search('[a-zA-Z]', ls[element]):
-					ls.insert(element-1, '-')
-				ls.insert(element, '\n')
-				n += 1
-				print("Linebreak")
-		str_to_return = "".join(ls)
-		return str_to_return, n
+    def graph_comment_formater(self, comment):
+        # MAX COLUMN LENGTh 55
+        ls = list(comment)
+        n = 1
+        for element in range(0, len(ls)):
+            if element % 35 == 0 and element != 0:
+                if re.search('[a-zA-Z]', ls[element]):
+                    ls.insert(element-1, '-')
+                ls.insert(element, '\n')
+                n += 1
+                print("Linebreak")
+        str_to_return = "".join(ls)
+        return str_to_return, n
                 
     def return_dfs(self):
         self.load_data()
