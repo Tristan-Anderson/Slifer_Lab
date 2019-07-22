@@ -583,15 +583,6 @@ class slifercal(object):
                 v = 0
                 n = 0
                 for index, row in logbook_slice.iterrows():
-                    ########################################
-                    #   This whole loop needs reworking.   #
-                    ########################################
-                    #print(index, row)
-                    # TODO: Here, I would like to try and combine this loop, with the other loop 
-                    # down below that deals with dating the comments.  If I can combine it, and
-                    # make it simpler, this program will be a lot more readable.
-                    #
-                    #exit()
                     timestamp = row["Time"]
                     have_i_printed = False
                     if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
