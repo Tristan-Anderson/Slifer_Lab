@@ -592,6 +592,7 @@ class slifercal(object):
                 n = 0
                 for index, row in logbook_slice.iterrows():
                 	row["comment"], y = self.graph_comment_formater(row["Comment"])
+                	
                 	v += y
                     timestamp = row["Time"]
                     have_i_printed = False
