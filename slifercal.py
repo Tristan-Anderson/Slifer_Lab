@@ -486,23 +486,29 @@ class slifercal(object):
                     rng_end += 1
                 else:
                     break
-            (df_xslice,df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
+            (df_xslice, df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
             if kernel[1] == 1: # So we get meaningful results.
                 avg = numpy.mean(df_yslice)
                 std = numpy.std(df_yslice)
                 rng_ee += 1
 
             ### Annotations ###
+
+            # Upper figure Annotations: basic information
             canvas.annotate(
                 "Average: "+str(avg)+"\n"+"Standard Deviation: "+str(std)+\
                 '\nRange: '+str(rng)+'\nRange length: '+str(d_points)+\
                 '\nColumn Length: '+str(len(self.df[thermistor])),
                 xy=(fig_x_basic_info*dpi_val,fig_y_basic_info*dpi_val), 
                 xycoords='figure pixels')
+
+            # Far left graph x-axis: Date of the FIRST datapoint.
             canvas.annotate(
                 self.df["Time"][rng_start],
                 xy=(fig_x_start_range_data*dpi_val,fig_y_range_data*dpi_val),
                 xycoords='figure pixels')
+
+            # Far right graph x-axis: Date of LAST datapoint.
             canvas.annotate(
                 self.df["Time"][rng_end],
                 xy=(fig_x_end_range_data*dpi_val,fig_y_range_data*dpi_val),
@@ -510,6 +516,7 @@ class slifercal(object):
 
             if comments is not None:
                 try:
+                	# Load logbook if module has been called prematurely.
                     self.logbook_df
                 except:
                     try:
@@ -527,6 +534,7 @@ class slifercal(object):
                     xy=(fig_x_logbook_comment*dpi_val,fig_y_logbook_comment*dpi_val),
                     xycoords='figure pixels')
 
+                # Generator of figures components.
                 (range_start, range_end) = (min(df_xslice), max(df_xslice))
                 graph = fig.add_subplot(211)
                 footnotes = fig.add_subplot(212)
@@ -583,6 +591,8 @@ class slifercal(object):
                 v = 0
                 n = 0
                 for index, row in logbook_slice.iterrows():
+                	row["comment"], y = self.graph_comment_formater(row["Comment"])
+                	v += y
                     timestamp = row["Time"]
                     have_i_printed = False
                     if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
@@ -626,7 +636,7 @@ class slifercal(object):
                             xycoords='figure pixels')
                         have_i_printed = True
                     v += 1
-                    
+
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
             graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
             graph.set_xlabel("Time")
@@ -641,6 +651,20 @@ class slifercal(object):
             plt.clf()
             gc.collect() # You will run out of memory if you do not do this.
             return True
+
+	def graph_comment_formater(self, comment):
+		# MAX COLUMN LENGTh 55
+		ls = list(comment)
+		n = 1
+		for element in range(0, len(ls)):
+			if element % 35 == 0 and element != 0:
+				if re.search('[a-zA-Z]', ls[element]):
+					ls.insert(element-1, '-')
+				ls.insert(element, '\n')
+				n += 1
+				print("Linebreak")
+		str_to_return = "".join(ls)
+		return str_to_return, n
                 
     def return_dfs(self):
         self.load_data()
