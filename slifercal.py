@@ -1,4 +1,4 @@
-import time, pandas, numpy, copy, datetime, os, traceback, dateutil.parser, multiprocessing
+import time, pandas, numpy, copy, datetime, os, traceback, dateutil.parser, multiprocessing, re
 from multiprocessing import Pool
 from pandas.plotting import register_matplotlib_converters
 from thermistor_profile import thermistor_profile as tp
