@@ -45,5 +45,11 @@ FRI May 3, 2019
 		Additional oscilations identified in AB.F5_LHe_in_range_58180.png on the order of 
 	
 	Temperature Profile:
-		(FIXED 5/6/19) Noticed that tp Auto-update-calibrations was not writing updated coefficents to the curve_coefficent_data.csv : Needs fixing.
+		(DONE 5/9) Noticed that tp Auto-update-calibrations was not writing updated coefficents to the curve_coefficent_data.csv : Needs fixing.
 
+July 22, 2019
+
+	All things above July 22nd have been completed.
+
+	TODO - Output formatting for the bottom section of the graph
+	

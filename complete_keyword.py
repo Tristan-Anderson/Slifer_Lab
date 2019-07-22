@@ -1,4 +1,4 @@
-
 from slifercal import slifercal as sc
+
 k = sc()
-k.plotting()
+k.keyword(['mm', 'waves', 'VNA', 'VME'])
