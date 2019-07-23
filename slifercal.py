@@ -427,8 +427,18 @@ class slifercal(object):
                                         thermistor, temperature, cut, row,
                                         avg_bars=True)     
     
-    def plot_keyword_hits(self, keywords, thermistors=None):
-        self.find_keyword_hits(keywords, thermistors=thermistors)
+    def plot_keyword_hits(self, keywords, thermistors=None, persistence_exists=False):
+        try:
+            self.keyword_hits
+        except:
+            try:
+                with open("keyword_persistence.pk", 'rb') as f:
+                    self.keyword_hits = pickle.load(f)
+            except:
+                self.find_keyword_hits(keywords, thermistors=thermistors)
+                with open("keyword_persistence.pk", 'wb') as f:
+                    pickle.dump(self.keyword_hits)
+        
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
@@ -659,7 +669,7 @@ class slifercal(object):
 
     def graph_comment_formater(self, comment):
         # MAX COLUMN LENGTH 55
-        ls = list(comment)
+        ls = list(str(comment))
         n = 0
         for element in range(0, len(ls)):
             if element % 175 == 0 and element != 0:
