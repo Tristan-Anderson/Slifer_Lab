@@ -442,7 +442,7 @@ class slifercal(object):
                 print("No keyword kernels found. Searching for keyword hits")
                 self.find_keyword_hits(keywords, thermistors=thermistors)
                 with open("keyword_persistence.pk", 'wb') as f:
-                    pickle.dump(self.keyword_hits)
+                    pickle.dump(self.keyword_hits, f)
         
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
