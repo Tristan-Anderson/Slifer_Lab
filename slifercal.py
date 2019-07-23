@@ -607,6 +607,7 @@ class slifercal(object):
             v = 0
             n = 0
             was = False
+            shift = False
             for index, row in logbook_slice.iterrows():
                 modified_comment, y = self.graph_comment_formater(row["Comment"])
                 v += y
@@ -614,8 +615,10 @@ class slifercal(object):
                 have_i_printed = False
                 old_v = v
                 if v > 55:
-                    fig_x_comment_start += 15
-                    fig_x_timestamp += 15
+                    if not shift:
+                        fig_x_comment_start += 15
+                        fig_x_timestamp += 15
+                        shift = True
                     v -= 55
                 if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
                     canvas.annotate(
