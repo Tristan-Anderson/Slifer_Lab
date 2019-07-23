@@ -427,14 +427,19 @@ class slifercal(object):
                                         thermistor, temperature, cut, row,
                                         avg_bars=True)     
     
-    def plot_keyword_hits(self, keywords, thermistors=None, persistence_exists=False):
+    def plot_keyword_hits(self, keywords, thermistors=None, persistance=True):
         try:
             self.keyword_hits
         except:
             try:
+                print("Attempting to load keyword graph kernels from previous class instance.")
                 with open("keyword_persistence.pk", 'rb') as f:
                     self.keyword_hits = pickle.load(f)
+                print("Previous keyword kernels found. Graphing will begin momentarily.")
+                if persistance != True:
+                    print("Persistance flag not True. Forcing program to search for keywords.")
             except:
+                print("No keyword kernels found. Searching for keyword hits")
                 self.find_keyword_hits(keywords, thermistors=thermistors)
                 with open("keyword_persistence.pk", 'wb') as f:
                     pickle.dump(self.keyword_hits)
@@ -444,7 +449,6 @@ class slifercal(object):
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True)
             
-
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000):
         #################################################################################
         """cut
@@ -671,13 +675,16 @@ class slifercal(object):
         # MAX COLUMN LENGTH 55
         ls = list(str(comment))
         n = 0
+        testval=175
         for element in range(0, len(ls)):
-            if element % 175 == 0 and element != 0:
+            if element % testval == 0 and element != 0:
                 if re.search('[a-zA-Z]', ls[element]):
                     ls.insert(element-1, '-')
                 ls.insert(element, '\n     ')
                 n += 1
-                print("Linebreak")
+                print("")
+                if testval == 175:
+                    testval += 5
         str_to_return = "".join(ls)
         return str_to_return, n
                 
