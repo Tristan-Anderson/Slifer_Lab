@@ -605,14 +605,17 @@ class slifercal(object):
             poi = True
             v = 0
             n = 0
+            was = False
             for index, row in logbook_slice.iterrows():
                 modified_comment, y = self.graph_comment_formater(row["Comment"])
                 v += y
                 timestamp = row["Time"]
                 have_i_printed = False
+                old_v = v
                 if v > 55:
                     fig_x_comment_start += 15
                     fig_x_timestamp += 15
+                    v -= 55
                 if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
                     canvas.annotate(
                         timestamp, 
@@ -654,6 +657,7 @@ class slifercal(object):
                         xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
                         xycoords='figure pixels')
                     have_i_printed = True
+                v = old_v
                 v += 1
 
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
@@ -680,11 +684,9 @@ class slifercal(object):
             if element % testval == 0 and element != 0:
                 if re.search('[a-zA-Z]', ls[element]):
                     ls.insert(element-1, '-')
-                ls.insert(element, '\n     ')
+                ls.insert(element, '\n')
                 n += 1
                 print("")
-                if testval == 175:
-                    testval += 5
         str_to_return = "".join(ls)
         return str_to_return, n
                 
