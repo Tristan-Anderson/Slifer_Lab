@@ -432,7 +432,7 @@ class slifercal(object):
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, comments=True, wing_width=1000, avg_bars=True)
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True)
             
 
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000):
