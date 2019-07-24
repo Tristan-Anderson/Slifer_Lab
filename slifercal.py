@@ -701,7 +701,6 @@ class slifercal(object):
                     ls.insert(element-1, '-')
                 ls.insert(element, '\n')
                 n += 1
-                print("")
         str_to_return = "".join(ls)
         return str_to_return, n
                 
