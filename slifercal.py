@@ -608,18 +608,29 @@ class slifercal(object):
             n = 0
             was = False
             shift = False
+            shift_2 = False
             for index, row in logbook_slice.iterrows():
                 modified_comment, y = self.graph_comment_formater(row["Comment"])
                 v += y
                 timestamp = row["Time"]
                 have_i_printed = False
                 old_v = v
-                if v > 55:
+                old_n = n
+                if v > 54:
                     if not shift:
-                        fig_x_comment_start += 15
-                        fig_x_timestamp += 15
+                        fig_x_comment_start += 10.7
+                        fig_x_timestamp += 10.7
                         shift = True
-                    v -= 55
+                    elif not shift_2 and v > 108:
+                        fig_x_comment_start += 10.7
+                        fig_x_timestamp += 10.7
+                        shift_2 = True
+                    if v > 108:
+                        v -= 108
+                        n -= 108
+                    else:
+                        v -= 55
+                        n -= 55
                 if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
                     canvas.annotate(
                         timestamp, 
@@ -631,6 +642,7 @@ class slifercal(object):
                         timestamp, 
                         xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
                         xycoords='figure pixels')
+                n = old_n
                 n += 1
                 n += y
                 if any(x in str(row["Comment"]) for x in keywords):
@@ -683,7 +695,7 @@ class slifercal(object):
         # MAX COLUMN LENGTH 55
         ls = list(str(comment))
         n = 0
-        testval=175
+        testval=110
         for element in range(0, len(ls)):
             if element % testval == 0 and element != 0:
                 if re.search('[a-zA-Z]', ls[element]):
