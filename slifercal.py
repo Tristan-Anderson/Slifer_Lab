@@ -24,12 +24,11 @@ def what_temperature_range_are_we_in(average,column_name):
                 return 2
 
 class slifercal(object):
-    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, record_location=None):
+    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None):
         register_matplotlib_converters() # Calling the calibrate method without this here told me to put this here.
         self.trslat = {0: "RT", 1: "LN2", 2: "LHe"}
         self.datafile_location = datafile_location
-        self.logbook_datafile_location= logbook_datafile_location
-        self.data_record_datafile_location = record_location
+        self.logbook_datafile_location = logbook_datafile_location
         (filename,line_number,function_name,text)=traceback.extract_stack()[-2] # NAME of THIS CLASS (for pickling later if needed - but probably not.)
         def_name = text[:text.find('=')].strip()
         self.name = def_name
@@ -55,7 +54,6 @@ class slifercal(object):
                 if entry not in rows_to_be_deleted:
                     rows_to_be_deleted.append(entry)
         self.df = self.df.drop(rows_to_be_deleted, axis=0)
-        print("File Cleaned.")
         for index in self.df:
             if index != "Time":
                 self.df[index] = self.df[index].astype(float)   
@@ -67,6 +65,7 @@ class slifercal(object):
             for name in column_names:                           # People who dont read documentation    
                 if name != 'Time' and name not in column:
                     self.df.drop(columns=name)
+        print("Experimental data is clean.")
 
     def complete_keyword(self, timeit, keywords, rangeshift=1, range_length=None):
         if timeit:
@@ -91,7 +90,6 @@ class slifercal(object):
     def keyword(self, keywords, thermistors=None):
         self.__read_data()
         self.__cleandf()
-        self.load_data()
         self.plot_keyword_hits(keywords, thermistors=thermistors)
     
     def __debug_attribute(self, obj):
@@ -159,15 +157,6 @@ class slifercal(object):
             with open(file_location, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
             print("File read")
-
-    def __load_data_record(self):
-        if self.data_record_datafile_location == None:
-            print("No loogbook was used to initalize the instance!\nAssuming filename is \"data_record.csv\"")
-            self.data_record_datafile_location = "data_record.csv"
-        with open(self.data_record_datafile_location,'r') as f:
-            self.record_df = pandas.read_csv(f, sep='\t')
-        self.record_df["Time"] = pandas.to_datetime(self.record_df['Time'])
-        print("Data Record loaded.")
 
     def __load_logbook(self):
         if self.logbook_datafile_location == None:
