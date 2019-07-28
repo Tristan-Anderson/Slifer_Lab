@@ -1,14 +1,16 @@
 import sys, random, os
 from PySide2 import QtCore, QtWidgets, QtGui
+from PyQt5.QtCore import QObject, pyqtSignal
 from slifercal import slifercal as sliferCal
 
-class MyWidget(QtWidgets.QWidget):
+class myWidget(QtWidgets.QWidget):
     def __init__(self):
-        super().__init__()
+        #super().__init__()
         # Actually useful self variables
         self.working_directory = os.getcwd()
         self.df_path = "data.csv"
         # Creating widgets and stuff
+        self.textEdit = QtWidgets.QLineEdit()
         self.data_file_location_init = self.working_directory+'/'+"data.csv   (Default)"
         self.window = QtWidgets.QWidget()
         self.button_keywords = QtWidgets.QPushButton("Plot Keyword Hits")
@@ -50,9 +52,50 @@ class MyWidget(QtWidgets.QWidget):
 
     def fsr_splash(self):
         self.window = QtWidgets.QWidget()
-        self.window.resize(800, 600)
+        self.window.resize(600, 600)
+        try:
+            with open(self.df_path, 'r') as f:
+                first_line = f.readline()
+        except:
+            self.update_data_file_location()
+        self.thermistor_names = first_line.split(',')
+        for element in self.thermistor_names:
+            if element == "Comment" or element == "Time":
+                self.thermistor_names.remove(element)
+        self.check_boxes = {}
+        self.title = QtWidgets.QLabel("Plot N Most-Stable Regions")
+        for thermistor in self.thermistor_names:
+            self.check_boxes[thermistor] = QtWidgets.QCheckBox(thermistor)
+        self.persistance = QtWidgets.QCheckBox("Persistance")
+        self.persistance.setChecked(True)
+        self.persistance_label = QtWidgets.QLabel("Querrying takes a fairly long time, that is why persistance is an option. If this persistance button is checked, the program will search for a\n"+" "*55+"previously parsed set of data, and attempt to produce graphs from that set.\n\n IF you are generating a NEW data set, UNCHECK the persistence setting, and the program will calculate a new set of data.")
+        self.GO = QtWidgets.QPushButton("Start plotting")
 
-        self.title = "Plot N Most-Stable Regions"
+        self.layout = QtWidgets.QGridLayout()
+        self.title.setStyleSheet("font: 15pt Comic Sans MS")
+        self.layout.addWidget(self.title, 0, 2)
+        row = 1
+        col = 0
+        self.layout1 = QtWidgets.QGridLayout()
+        for key in self.check_boxes:
+            self.layout1.addWidget(self.check_boxes[key], row, col)
+            if col >= 8:
+                col = 0
+                row += 1
+                continue
+            col += 1
+        row += 1
+        self.layout1.addWidget(self.persistance, row, 4, row, 7)
+        self.layout1.addWidget(self.persistance_label, row+4, 1, row+4, 7)
+        self.layout.addLayout(self.layout1, 1, 0, 1, 7)
+        row += 1
+        self.layout.addWidget(self.GO, row, 6, row, 7) 
+        row += 1
+
+        self.window.setLayout(self.layout)
+        self.window.show()
+
+        self.GO.clicked.connect(self.fsr_exec)
 
     def ct_splash(self):
         self.window = QtWidgets.QWidget()
@@ -86,6 +129,7 @@ class MyWidget(QtWidgets.QWidget):
         self.keyword_path = self.working_directory+'/'+"keyword_persistence.pk"+'\t'*4+"(Default)"
         self.keyword_browse_path = QtWidgets.QLineEdit(self.keyword_path)
         self.keyword_browse_path.setReadOnly(True)
+        self.graphing_in_progress = QtWidgets.QLabel("")
 
 
         self.layout = QtWidgets.QGridLayout()
@@ -114,6 +158,9 @@ class MyWidget(QtWidgets.QWidget):
 
         row += 1
         self.layout.addWidget(self.GO, row, 6, row, 7) 
+        row += 1
+        self.layout.addWidget(self.graphing_in_progress, row, 0, row+3, 7)
+        self.graphing_in_progress.hide()
 
         self.window.setLayout(self.layout)
         self.window.show()
@@ -121,8 +168,6 @@ class MyWidget(QtWidgets.QWidget):
         self.GO.clicked.connect(self.keyword_exec)
         self.keyword_browser_button.clicked.connect(self.browse_keyword)
 
-    def keyword_exec(self):
-        pass
     def browse_keyword(self):
         self.keyword_path, _ = QtWidgets.QFileDialog.getOpenFileName(self.window, 'Open File', self.working_directory, '*.pk')
         self.keyword_browse_path.setText(self.keyword_path)
@@ -132,17 +177,48 @@ class MyWidget(QtWidgets.QWidget):
         self.df.setText(self.keyword_path)
 
     def update_data_file_location(self):
+        #
         self.df_path, _ = QtWidgets.QFileDialog.getOpenFileName(self.window, 'Open File', self.working_directory, '*.csv')
 
     def keyword_exec(self):
-        instance = sliferCal()
+        self.graphing_in_progress = QtWidgets.QLabel("Graphing in progress. See Console.")
+        self.window.update()
+        keywords = self.keywords.text().split(',')
+        thermistors = self.get_thermistor_checkbox_states()
+        persistance = False
+        if self.persistance.isChecked():
+            persistance = True
+        self.window.close()
+        instance = sliferCal(processes=0, datafile_location=self.df_path, logbook_datafile_location=None)
+        instance.keyword(keywords, thermistors=thermistors, persistance=persistance)
+
+    def fsr_exec(self):
+        pass
+
+    def get_thermistor_checkbox_states(self):
+        checked = []
+        for qt_index in self.check_boxes:
+            qt_checkbox = self.check_boxes[qt_index]
+            if qt_checkbox.isChecked():
+                checked.append(qt_index)
+        index = 0
+        for element in checked:
+            if "\n" in element:
+                error = element
+                listed_error = list(error)
+                listed_error.remove("\n")
+                corrected = "".join(listed_error)
+                checked[index] = corrected
+            index += 1
+        return checked
+
 
 def main():
     if __name__ == "__main__":
         app = QtWidgets.QApplication([])
 
-        widget = MyWidget()
-
+        widget = myWidget()
+        
         sys.exit(app.exec_())
 
 main()

@@ -87,10 +87,7 @@ class slifercal(object):
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
 
-    def keyword(self, keywords, thermistors=None):
-        self.__read_data()
-        self.__cleandf()
-        self.plot_keyword_hits(keywords, thermistors=thermistors)
+
     
     def __debug_attribute(self, obj):
         ############################################
@@ -171,6 +168,11 @@ class slifercal(object):
         # In an interable data-structure, find the nearest to the 
         # value presented.
         return min(iterable, key=lambda x: abs(x - test_val))
+
+    def keyword(self, keywords, thermistors=None, persistance=True):
+        self.__read_data()
+        self.__cleandf()
+        self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance)
 
     def keyword_nearest(self, test_val, iterable, tag):
         # Based on the __nearest() method, this does that, 
@@ -416,7 +418,7 @@ class slifercal(object):
                                         thermistor, temperature, cut, row,
                                         avg_bars=True)     
     
-    def plot_keyword_hits(self, keywords, thermistors=None, persistance=True):
+    def __plot_keyword_hits(self, keywords, thermistors=None, persistance=True):
         try:
             self.keyword_hits
         except:
