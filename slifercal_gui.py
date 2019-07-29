@@ -68,8 +68,10 @@ class myWidget(QtWidgets.QWidget):
             self.check_boxes[thermistor] = QtWidgets.QCheckBox(thermistor)
         self.persistance = QtWidgets.QCheckBox("Persistance")
         self.persistance.setChecked(True)
-        self.persistance_label = QtWidgets.QLabel("Querrying takes a fairly long time, that is why persistance is an option. If this persistance button is checked, the program will search for a\n"+" "*55+"previously parsed set of data, and attempt to produce graphs from that set.\n\n IF you are generating a NEW data set, UNCHECK the persistence setting, and the program will calculate a new set of data.")
+        self.persistance_label = QtWidgets.QLabel("Calculating data is very recource intensive, that is why persistance is an option. If this persistance button is checked, the program will search for a\n"+" "*75+"previously parsed set of data, and attempt to produce graphs from that set.\n\n"+" "*13+ "IF you are generating a NEW data set, UNCHECK the persistence setting, and the program will calculate a new set of data for you.\n\nThis should only be done when calculating an entirely NEW set of experimental data. The current set of data stored in persitance has every single\nthermistor's data parsed and ready to go. You just need to specify how many stable regions for each thermistor in each temperature range that\n"+" "*130+"you want to plot.")
         self.GO = QtWidgets.QPushButton("Start plotting")
+        self.n_box = QtWidgets.QComboBox()
+        self.n_box.addItems([str(i) for i in range(1, 101)])
 
         self.layout = QtWidgets.QGridLayout()
         self.title.setStyleSheet("font: 15pt Comic Sans MS")
@@ -89,8 +91,9 @@ class myWidget(QtWidgets.QWidget):
         self.layout1.addWidget(self.persistance_label, row+4, 1, row+4, 7)
         self.layout.addLayout(self.layout1, 1, 0, 1, 7)
         row += 1
+        self.layout.addWidget(self.n_box)
+        row+=1
         self.layout.addWidget(self.GO, row, 6, row, 7) 
-        row += 1
 
         self.window.setLayout(self.layout)
         self.window.show()
@@ -193,7 +196,9 @@ class myWidget(QtWidgets.QWidget):
         instance.keyword(keywords, thermistors=thermistors, persistance=persistance)
 
     def fsr_exec(self):
-        pass
+        self.n = int(self.n_box.currentText())
+        instance = sliferCal(processes=0, datafile_location=self.df_path)
+        instance.plot_top_n_ranges(self, n=self.n, comments=True)
 
     def get_thermistor_checkbox_states(self):
         checked = []

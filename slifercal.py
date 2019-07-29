@@ -290,7 +290,7 @@ class slifercal(object):
             if column not in ["Time", "Comment"]:
                 self.thermistor_names.append(column)
 
-    def find_top_n_ranges(self, n=10):
+    def __find_top_n_ranges(self, n=10):
         ###############################################################
         """
            This is the self.keeper_data parser that sorts through 
@@ -410,7 +410,7 @@ class slifercal(object):
                     self.plotting_module(thermistor, temperature, cut, row, avg_bars=True, keywords=["waves", "mm", "microwaves", "vna"])
     
     def plot_top_n_ranges(self, n=10, comments=True):
-        self.find_top_n_ranges(n=n)
+        self.__find_top_n_ranges(n=n)
         for thermistor in self.n_best:
             for temperature in self.n_best[thermistor]:
                 for cut, row in self.n_best[thermistor][temperature].iterrows():
