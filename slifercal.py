@@ -7,6 +7,35 @@ import matplotlib
 from matplotlib import pyplot as plt
 import gc
 
+def convert_to_k_spect(r, thermistor):
+    coeffs = {
+              "CCX.T1": [1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
+              "CX.T2":[1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
+              "CCCS.T3":[-0.1562396321606, 27.64546747296, -188.2549809283, 1044.765194077, -2679.688300274, 3485.87992613, -1215.52472759]
+             }
+    val = 0
+    n=0
+    if thermistor == "CCCS.T3":
+        for coeff in coeffs[thermistor]:
+            val += coeff*(1000/r)**n
+            n += 1
+        return val
+    else:
+        ZU = 4.57773645241
+        ZL = 2.79190447712
+        Z = numpy.log(r)
+        k = ((Z-ZL)-(ZU-Z))/(ZU-ZL)
+        n = 0
+        val = coeffs[thermistor][n]
+        n += 1
+        for coeff in coeffs[thermistor]:
+            val += coeff*numpy.cos(n*numpy.arccos(k))
+        val = coeffs[thermistor][0] 
+        return val
+
+def convert_to_k(r,a,b,c):
+    return a+b*numpy.exp(c*(1000/r))
+
 def what_temperature_range_are_we_in(average,column_name):
         if "C" in column_name:
             if average<1200:
@@ -169,10 +198,10 @@ class slifercal(object):
         # value presented.
         return min(iterable, key=lambda x: abs(x - test_val))
 
-    def keyword(self, keywords, thermistors=None, persistance=True):
+    def keyword(self, keywords, thermistors=None, persistance=True, kelvin=False):
         self.__read_data()
         self.__cleandf()
-        self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance)
+        self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance, kelvin=kelvin)
 
     def keyword_nearest(self, test_val, iterable, tag):
         # Based on the __nearest() method, this does that, 
@@ -418,10 +447,10 @@ class slifercal(object):
                                         thermistor, temperature, cut, row,
                                         avg_bars=True)     
     
-    def __plot_keyword_hits(self, keywords, thermistors=None, persistance=True):
+    def __plot_keyword_hits(self, keywords, thermistors=None, persistance=True, kelvin=False):
         try:
             self.keyword_hits
-        except:
+        except AttributeError:
             try:
                 print("Attempting to load keyword graph kernels from previous class instance.")
                 with open("keyword_persistence.pk", 'rb') as f:
@@ -438,9 +467,9 @@ class slifercal(object):
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True)
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
             
-    def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000):
+    def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False):
         #################################################################################
         """cut
            This takes some basic information in the form of its arguments, and with a 
@@ -493,6 +522,13 @@ class slifercal(object):
                     rng_end -= 1
                     break
             (df_xslice, df_yslice) = (self.df.loc[rng_start:rng_end, "Time"], self.df.loc[rng_start:rng_end,thermistor])
+            if kelvin:
+                try:
+                    self.coefficents_df
+                except AttributeError:
+                    self.load_coefficents()
+                df_yslice = self.convert_df_yslice(thermistor, df_yslice)
+
             if kernel[1] == 1: # So we get meaningful results.
                 avg = numpy.mean(df_yslice)
                 std = numpy.std(df_yslice)
@@ -524,7 +560,7 @@ class slifercal(object):
             try:
                 # Load logbook if module has been called prematurely.
                 self.logbook_df
-            except:
+            except AttributeError:
                 try:
                     self.__load_logbook()
                 except FileNotFoundError:
@@ -555,7 +591,8 @@ class slifercal(object):
 
             
             ycut = self.df.loc[rng_start:rng_end, thermistor]
-
+            if kelvin:
+                ycut = self.convert_df_yslice(thermistor, ycut)
             if len(ycut) > 1:
                 ### All of the Data ###
                 graph.plot(self.df.loc[rng_start:rng_end, "Time"], ycut, color="blue", label="Data")
@@ -681,6 +718,15 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
 
+    def convert_df_yslice(self, thermistor, data):
+        thermistors_in_file = ["CCS.F1","CCS.F2","CCS.F3","CCS.F4","AB.F5", "AB.F6", "CCS.F7", "CCS.F8","CCS.F9","CCS.F10", "CCS.F11", "CCS.S1", "CCS.S2", "CCS.S3"]
+        if thermistor in thermistors_in_file:
+            (a,b,c) = (self.coefficents_df.loc['a', thermistor], self.coefficents_df.loc['b', thermistor], self.coefficents_df.loc['c', thermistor])
+            data2 = data.apply(convert_to_k, args=(a,b,c))
+        else:
+            data2 = data.apply(convert_to_k_spect, args=(thermistor))
+        return data2
+
     def graph_comment_formater(self, comment):
         # MAX COLUMN LENGTH 55
         ls = list(str(comment))
@@ -706,3 +752,7 @@ class slifercal(object):
         for key in thermistors:
             if key != "Time":
                 thermistors[key].calibrate_curve()
+
+    def load_coefficents(self):
+        with open("curve_coefficent_data.csv", 'r') as f:
+            self.coefficents_df = pandas.read_csv(f, index_col='Name')
