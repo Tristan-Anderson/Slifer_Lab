@@ -7,7 +7,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 import gc
 
-def convert_to_k_spect(r,thermistor):
+def convert_to_k_spect(r, thermistor):
     coeffs = {
               "CCX.T1": [1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
               "CX.T2":[1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
