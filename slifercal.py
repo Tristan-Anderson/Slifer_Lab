@@ -725,6 +725,7 @@ class slifercal(object):
             data2 = data.apply(convert_to_k, args=(a,b,c))
         else:
             print(thermistor)
+            print(data)
             data2 = data.apply(convert_to_k_spect, args=(thermistor))
         return data2
 
