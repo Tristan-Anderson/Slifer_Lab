@@ -7,7 +7,12 @@ import matplotlib
 from matplotlib import pyplot as plt
 import gc
 
-def convert_to_k_spect(r, thermistor):
+
+def convert_to_k(r,a,b,c):
+    return a+b*numpy.exp(c*(1000/r))
+
+def convert_to_k_spect(r,**kwargs):
+    t = kwargs["thermistor"]
     coeffs = {
               "CCX.T1": [1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
               "CX.T2":[1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
@@ -15,8 +20,8 @@ def convert_to_k_spect(r, thermistor):
              }
     val = 0
     n=0
-    if thermistor == "CCCS.T3":
-        for coeff in coeffs[thermistor]:
+    if t == "CCCS.T3":
+        for coeff in coeffs[t]:
             val += coeff*(1000/r)**n
             n += 1
         return val
@@ -26,15 +31,12 @@ def convert_to_k_spect(r, thermistor):
         Z = numpy.log(r)
         k = ((Z-ZL)-(ZU-Z))/(ZU-ZL)
         n = 0
-        val = coeffs[thermistor][n]
+        val = coeffs[t][n]
         n += 1
-        for coeff in coeffs[thermistor]:
+        for coeff in coeffs[t]:
             val += coeff*numpy.cos(n*numpy.arccos(k))
-        val = coeffs[thermistor][0] 
+        val = coeffs[t][0] 
         return val
-
-def convert_to_k(r,a,b,c):
-    return a+b*numpy.exp(c*(1000/r))
 
 def what_temperature_range_are_we_in(average,column_name):
         if "C" in column_name:
@@ -465,10 +467,9 @@ class slifercal(object):
                     pickle.dump(self.keyword_hits, f)
         
         for thermistor in self.keyword_hits:
-            if thermistor in ["CX.T1", "CCX.T2", "CCCS.T3"]:
-                for temperature in self.keyword_hits[thermistor]:
-                    for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                        self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
+            for temperature in self.keyword_hits[thermistor]:
+                for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
             
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False):
         #################################################################################
@@ -609,7 +610,7 @@ class slifercal(object):
                 ### Red Lines ###
                 graph.plot(
                     (df_xslice[rng_ss],df_xslice[rng_ss]),
-                    (avg-max(self.df.loc[rng_start:rng_end, thermistor])*0.05,avg+max(self.df.loc[rng_start:rng_end, thermistor])*0.05),
+                    (avg-max(ycut)*0.05,avg+max(ycut)*0.05),
                     'r')
                 graph.annotate(
                     str(df_xslice[rng_ss]),
@@ -725,9 +726,7 @@ class slifercal(object):
             (a,b,c) = (self.coefficents_df.loc['a', thermistor], self.coefficents_df.loc['b', thermistor], self.coefficents_df.loc['c', thermistor])
             data2 = data.apply(convert_to_k, args=(a,b,c))
         else:
-            print(thermistor)
-            print(data)
-            data2 = data.apply(convert_to_k_spect, args=(thermistor))
+            data2 = data.apply(convert_to_k_spect, args=(), thermistor=thermistor)
         return data2
 
     def graph_comment_formater(self, comment):
