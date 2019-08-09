@@ -24,7 +24,7 @@ def convert_to_k_spect(r,**kwargs):
         for coeff in coeffs[t]:
             try:
                 val += coeff*(1000/r)**n
-            except DivideByZeroError:
+            except:
                 print("Divide by zero error")
                 return 0
             n += 1
@@ -471,9 +471,10 @@ class slifercal(object):
                     pickle.dump(self.keyword_hits, f)
         
         for thermistor in self.keyword_hits:
-            for temperature in self.keyword_hits[thermistor]:
-                for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
+            if thermistor == "CCCS.T3":
+                for temperature in self.keyword_hits[thermistor]:
+                    for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
+                        self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
             
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False):
         #################################################################################
