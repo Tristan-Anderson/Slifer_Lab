@@ -22,7 +22,11 @@ def convert_to_k_spect(r,**kwargs):
     n=0
     if t == "CCCS.T3":
         for coeff in coeffs[t]:
-            val += coeff*(1000/r)**n
+            try:
+                val += coeff*(1000/r)**n
+            except DivideByZeroError:
+                print("Divide by zero error")
+                return 0
             n += 1
         return val
     else:
