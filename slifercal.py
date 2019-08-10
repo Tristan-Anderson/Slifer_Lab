@@ -423,7 +423,7 @@ class slifercal(object):
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
             
-    def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False):
+    def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False, extra=''):
         #################################################################################
         """cut
            This takes some basic information in the form of its arguments, and with a 
@@ -651,7 +651,7 @@ class slifercal(object):
                 v += 1
 
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
-            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
+            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+extra)
             graph.set_xlabel("Time")
             if kelvin:
                 graph.set_ylabel("Kelvin")
@@ -661,8 +661,8 @@ class slifercal(object):
             graph.xaxis_date()
             graph.legend(loc='best')
 
-            plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
-            print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+".png")
+            plt.savefig(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+extra+".png")
+            print("Generated: ", thermistor+"_"+temperature+"_in_range_"+str(nth_range)+extra+".png")
             plt.close('all')
             plt.clf()
             gc.collect() # You will run out of memory if you do not do this.
@@ -720,7 +720,7 @@ class slifercal(object):
         df_index = self.df.index[self.df["Time"] == nearest_time][0]
         return [tag, nearest_time, df_index, updown]
 
-    def __find_magnet_spikes(self, thermistors, keywords):
+    def plot_magnet_spikes(self, thermistors=None, keywords=[], kelvin=False):
         self.magnet_spikes = {}
         self.__load_data_record()
         self.__read_data()
@@ -750,18 +750,12 @@ class slifercal(object):
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin, range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
-            self.magnet_spikes[thermistor] = {"MAGNET_SPIKE":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
+                kernel_dicts[result[0]] = [1, 1, result[2], result[2], result[3]]
+            self.magnet_spikes[thermistor] = {"MAGNET_SPIKE":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END", "UPDOWN"])}
         
-    def plot_magnet_spikes(self, thermistors=None, keywords=[], kelvin=False):
-        # Need end result to be something like this.
-        #                [          T H I S  I S  T H E  K E R N E L         ]
-        #indexno:{MAGNET:[Average, Standard Deviation, Range Start, Range End]}#
-        self.__find_magnet_spikes(thermistors, keywords)
         for thermistor in self.magnet_spikes:
-            for temperature in self.magnet_spikes[thermistor]:
-                for cut, row in self.magnet_spikes[thermistor][temperature].iterrows():
-                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
+            for cut, row in self.magnet_spikes[thermistor]["MAGNET_SPIKE"].iterrows():
+                self.plotting_module(thermistor, "MAGNET_SPIKE", cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin, extra=self.magnet_spikes[thermistor]["MAGNET_SPIKE"].loc[cut,"UPDOWN"])
         
 def convert_to_k(r,a,b,c):
     #
