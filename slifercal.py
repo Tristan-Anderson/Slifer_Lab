@@ -59,7 +59,8 @@ def what_temperature_range_are_we_in(average,column_name):
                 return 2
 
 class slifercal(object):
-    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None):
+    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv'):
+        self.data_record_location=data_record_location        
         register_matplotlib_converters() # Calling the calibrate method without this here told me to put this here.
         self.trslat = {0: "RT", 1: "LN2", 2: "LHe"}
         self.datafile_location = datafile_location
@@ -765,3 +766,51 @@ class slifercal(object):
     def load_coefficents(self):
         with open("curve_coefficent_data.csv", 'r') as f:
             self.coefficents_df = pandas.read_csv(f, index_col='Name')
+
+    def __load_data_record(self):
+        with open(self.data_record_location, 'r') as f:
+            self.data_record = pandas.read_csv(f, delimiter='\t')
+        self.data_record["Time"] = pandas.to_datetime(self.data_record["Time"])
+    
+    def nearest_spike(self, test_val, iterable, updown, tag):
+        # Based on the __nearest() method, this does that, 
+        # but returns the critical range information for our kernels.
+        print("Looking for the nearest date to", test_val, "from data record", tag, "in raw-data file")
+        nearest_time = min(iterable, key=lambda x: abs(x - test_val))
+        df_index = self.df.index[self.df["Time"] == nearest_time][0]
+        return [tag, nearest_time, df_index, updown]
+        
+    def find_magnet_spikes(self):
+        # Need end result to be something like this.
+        #                [          T H I S  I S  T H E  K E R N E L         ]
+        #indexno:{MAGNET:[Average, Standard Deviation, Range Start, Range End]}#
+        self.magnet_spikes = {}
+        self.__load_data_record()
+        self.__read_data()
+        self.__cleandf()
+        prv_state = 0
+        self.mag_spike_indexes = []
+        for index, row in self.data_record.iterrows():
+            time = row["Time"]
+            state = row["State"]
+            if prv_state == 0 and state == 1:
+                self.mag_spike_indexes.append((index, "up"))
+            elif prv_state == 1 and state == 0:
+                self.mag_spike_indexes.append((index, "down"))
+            prv_state = state
+        with Pool(processes=self.processes) as pool:
+            result_objects = [pool.apply_async(
+                              self.nearest_spike, 
+                              args=(self.data_record.loc[dr_index[0], "Time"],
+                              self.df["Time"], dr_index[1], dr_index[0])) for dr_index in self.mag_spike_indexes]
+            pool.close()
+            pool.join()
+        results = [r.get() for r in result_objects if r.get() != False]
+
+        for thermistor in self.thermistor_names: # Creating Kernels here.
+            kernel_dicts = {} # [std, avg, range_begin, range_end]
+            for result in results: # [logbook_index, nearest_df_time, data_file_index]
+                kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
+            self.magnet_spikes[thermistor] = {"MAGNET_SPIKE":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
+            print(self.magnet_spikes)
+        
