@@ -592,7 +592,10 @@ class slifercal(object):
             ### Title and Labels ###
             graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
             graph.set_xlabel("Time")
-            graph.set_ylabel("Resistance")
+            if kelvin:
+                graph.set_ylabel("Kelvin")
+            else:
+                graph.set_ylabel("Resistance")
             graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
 
             
