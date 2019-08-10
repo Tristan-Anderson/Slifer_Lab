@@ -651,7 +651,7 @@ class slifercal(object):
                 v += 1
 
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
-            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+extra)
+            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+"_"+extra)
             graph.set_xlabel("Time")
             if kelvin:
                 graph.set_ylabel("Kelvin")
@@ -750,7 +750,7 @@ class slifercal(object):
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin, range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
-                kernel_dicts[result[0]] = [1, 1, result[2], result[2], result[3]]
+                kernel_dicts[result[0]] = [1, 1, result[2], result[2], "_"+result[3]]
             self.magnet_spikes[thermistor] = {"MAGNET_SPIKE":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END", "UPDOWN"])}
         
         for thermistor in self.magnet_spikes:
