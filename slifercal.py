@@ -536,16 +536,6 @@ class slifercal(object):
             footnotes = fig.add_subplot(212)
             footnotes.axis('off')
             canvas.axis('off')
-
-            ### Title and Labels ###
-            graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
-            graph.set_xlabel("Time")
-            if kelvin:
-                graph.set_ylabel("Kelvin")
-            else:
-                graph.set_ylabel("Resistance")
-            graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
-
             
             ycut = self.df.loc[rng_start:rng_end, thermistor]
             if kelvin:
@@ -663,7 +653,10 @@ class slifercal(object):
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
             graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range))
             graph.set_xlabel("Time")
-            graph.set_ylabel("Resistance")
+            if kelvin:
+                graph.set_ylabel("Kelvin")
+            else:
+                graph.set_ylabel("Resistance")
             graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
             graph.xaxis_date()
             graph.legend(loc='best')
