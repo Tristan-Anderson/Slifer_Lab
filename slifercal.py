@@ -7,57 +7,6 @@ import matplotlib
 from matplotlib import pyplot as plt
 import gc
 
-
-def convert_to_k(r,a,b,c):
-    return a+b*numpy.exp(c*(1000/r))
-
-def convert_to_k_spect(r,**kwargs):
-    t = kwargs["thermistor"]
-    coeffs = {
-              "CCX.T1": [1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
-              "CX.T2":[1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
-              "CCCS.T3":[-0.1562396321606, 27.64546747296, -188.2549809283, 1044.765194077, -2679.688300274, 3485.87992613, -1215.52472759]
-             }
-    val = 0
-    n=0
-    if t == "CCCS.T3":
-        for coeff in coeffs[t]:
-            try:
-                val += coeff*(1000/r)**n
-            except:
-                print("Divide by zero error")
-                return 0
-            n += 1
-        return val
-    else:
-        ZU = 4.57773645241
-        ZL = 2.79190447712
-        Z = numpy.log(r)
-        k = ((Z-ZL)-(ZU-Z))/(ZU-ZL)
-        n = 0
-        val = coeffs[t][n]
-        n += 1
-        for coeff in coeffs[t]:
-            val += coeff*numpy.cos(n*numpy.arccos(k))
-        val = coeffs[t][0] 
-        return val
-
-def what_temperature_range_are_we_in(average,column_name):
-        if "C" in column_name:
-            if average<1200:
-                return 0
-            elif average<2800:
-                return 1
-            elif average>2800:
-                return 2 
-        elif "A" in column_name:
-            if average<155:
-                return 0
-            elif average<800:
-                return 1
-            elif average>800:
-                return 2
-
 class slifercal(object):
     def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv'):
         self.data_record_location=data_record_location        
@@ -123,8 +72,6 @@ class slifercal(object):
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
 
-
-    
     def __debug_attribute(self, obj):
         ############################################
         """
@@ -779,11 +726,8 @@ class slifercal(object):
         nearest_time = min(iterable, key=lambda x: abs(x - test_val))
         df_index = self.df.index[self.df["Time"] == nearest_time][0]
         return [tag, nearest_time, df_index, updown]
-        
-    def find_magnet_spikes(self):
-        # Need end result to be something like this.
-        #                [          T H I S  I S  T H E  K E R N E L         ]
-        #indexno:{MAGNET:[Average, Standard Deviation, Range Start, Range End]}#
+
+    def __find_magnet_spikes(self, thermistors, keywords):
         self.magnet_spikes = {}
         self.__load_data_record()
         self.__read_data()
@@ -807,10 +751,72 @@ class slifercal(object):
             pool.join()
         results = [r.get() for r in result_objects if r.get() != False]
 
+        if thermistors is not None:
+            self.thermistor_names = thermistors
+
         for thermistor in self.thermistor_names: # Creating Kernels here.
             kernel_dicts = {} # [std, avg, range_begin, range_end]
             for result in results: # [logbook_index, nearest_df_time, data_file_index]
                 kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
             self.magnet_spikes[thermistor] = {"MAGNET_SPIKE":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
-            print(self.magnet_spikes)
         
+    def plot_magnet_spikes(self, thermistors=None, keywords=[], kelvin=False):
+        # Need end result to be something like this.
+        #                [          T H I S  I S  T H E  K E R N E L         ]
+        #indexno:{MAGNET:[Average, Standard Deviation, Range Start, Range End]}#
+        self.__find_magnet_spikes(thermistors, keywords)
+        for thermistor in self.magnet_spikes:
+            for temperature in self.magnet_spikes[thermistor]:
+                for cut, row in self.magnet_spikes[thermistor][temperature].iterrows():
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
+        
+def convert_to_k(r,a,b,c):
+    #
+    return a+b*numpy.exp(c*(1000/r))
+
+def convert_to_k_spect(r,**kwargs):
+    t = kwargs["thermistor"]
+    coeffs = {
+              "CCX.T1": [1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
+              "CX.T2":[1.09853, -1.262496, 0.610678, -0.26231, 0.103527, -0.0381089, 0.013162, -0.004359, 0.001512],
+              "CCCS.T3":[-0.1562396321606, 27.64546747296, -188.2549809283, 1044.765194077, -2679.688300274, 3485.87992613, -1215.52472759]
+             }
+    val = 0
+    n=0
+    if t == "CCCS.T3":
+        for coeff in coeffs[t]:
+            try:
+                val += coeff*(1000/r)**n
+            except:
+                print("Divide by zero error")
+                return 0
+            n += 1
+        return val
+    else:
+        ZU = 4.57773645241
+        ZL = 2.79190447712
+        Z = numpy.log(r)
+        k = ((Z-ZL)-(ZU-Z))/(ZU-ZL)
+        n = 0
+        val = coeffs[t][n]
+        n += 1
+        for coeff in coeffs[t]:
+            val += coeff*numpy.cos(n*numpy.arccos(k))
+        val = coeffs[t][0] 
+        return val
+
+def what_temperature_range_are_we_in(average,column_name):
+        if "C" in column_name:
+            if average<1200:
+                return 0
+            elif average<2800:
+                return 1
+            elif average>2800:
+                return 2 
+        elif "A" in column_name:
+            if average<155:
+                return 0
+            elif average<800:
+                return 1
+            elif average>800:
+                return 2
