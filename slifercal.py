@@ -291,6 +291,7 @@ class slifercal(object):
             self.keeper_data
         except AttributeError:
             self.find_stable_regions()
+            print("made it")
         for thermistor in self.keeper_data:
             calibration_list = {}
             for temperature in self.keeper_data[thermistor]:
