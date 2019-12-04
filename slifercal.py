@@ -96,6 +96,7 @@ class slifercal(object):
         self.__cleandf()
         self.__range_election(rangeshift=rangeshift)
         # Hi
+    
     def load_data(self, file_location=None):
         ###################################################
         """
