@@ -6,6 +6,8 @@ import _pickle as pickle
 import matplotlib
 from matplotlib import pyplot as plt
 import gc
+plt.style.use('fast')
+
 class slifercal(object):
     def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv'):
         self.data_record_location=data_record_location        
