@@ -283,15 +283,19 @@ class slifercal(object):
                      the n most stable regions of data.
                                                                     """
         ###############################################################
+        print("Do you have the right data?")
+        try:
+            self.keeper_data
+        except AttributeError:
+            print("Nope. You dont.")
+            self.find_stable_regions()
+            print("Now you have the right data.")
+        
         print("Searching for n-best...")
         self.load_data()
         self.__read_data()
         self.n_best = {}
-        try:
-            self.keeper_data
-        except AttributeError:
-            self.find_stable_regions()
-            print("made it")
+
         for thermistor in self.keeper_data:
             calibration_list = {}
             for temperature in self.keeper_data[thermistor]:
