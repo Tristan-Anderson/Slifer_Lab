@@ -132,7 +132,6 @@ class slifercal(object):
             except AttributeError:
                 print("No parsed datafile. Trying to search for datafile one last time.")
                 self.__read_data()
-                exit()
             print("File Read")
         elif file_location != None:
             self.kd_name = file_location
