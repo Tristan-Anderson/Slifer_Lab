@@ -85,7 +85,7 @@ class slifercal(object):
             pprint.pprint(obj, fout)
         print("Printed object to file: debug.txt")
 
-    def find_stable_regions(self, rangeshift=1):
+    def find_stable_regions(self, rangeshift=1, range_length=None):
         ##############################################
         """
             It analyses data, then saves the data
@@ -94,7 +94,7 @@ class slifercal(object):
         ##############################################
         self.__read_data()
         self.__cleandf()
-        self.__range_election(rangeshift=rangeshift)
+        self.__range_election(rangeshift=rangeshift, range_length=range_length)
         # Hi
     
     def load_data(self, file_location=None):
@@ -154,10 +154,10 @@ class slifercal(object):
         # value presented.
         return min(iterable, key=lambda x: abs(x - test_val))
 
-    def keyword(self, keywords, thermistors=None, persistance=True, kelvin=False):
+    def keyword(self, keywords, thermistors=None, persistance=True, kelvin=False, wing_width=1000):
         self.__read_data()
         self.__cleandf()
-        self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance, kelvin=kelvin)
+        self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance, kelvin=kelvin, wing_width=wing_width)
 
     def keyword_nearest(self, test_val, iterable, tag):
         # Based on the __nearest() method, this does that, 
@@ -412,7 +412,7 @@ class slifercal(object):
                                         thermistor, temperature, cut, row,
                                         avg_bars=True)     
     
-    def __plot_keyword_hits(self, keywords, thermistors=None, persistance=True, kelvin=False):
+    def __plot_keyword_hits(self, keywords, thermistors=None, persistance=True, kelvin=False, wing_width=1000):
         try:
             self.keyword_hits
         except AttributeError:
@@ -432,7 +432,7 @@ class slifercal(object):
         for thermistor in self.keyword_hits:
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
-                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
+                    self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=wing_width, avg_bars=True, kelvin=kelvin)
             
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False, extra=''):
         #################################################################################
