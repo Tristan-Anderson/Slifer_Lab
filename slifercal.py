@@ -474,13 +474,15 @@ class slifercal(object):
                 data_slice.drop("Time", axis=1, inplace=True)
                 print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
                 
-                plt.title("Data between"+user_start.strftime("%m/%d/%Y, %H:%M:%S")+"and"+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
+                plt.title("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
                 canvas.set_xlabel("Time")
                 canvas.set_ylabel("Resistance/Temperature")
                 for column in data_slice:
                     canvas.plot(time_slice,data_slice[column], label=column)
                 canvas.legend(loc='best')
                 plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
+                plt.show()
+                
 
                 plt.close('all')
                 plt.clf()
