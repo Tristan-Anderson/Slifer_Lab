@@ -1,4 +1,4 @@
-import sys, random, os
+import sys, random, os, pandas
 from PySide2 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import QObject, pyqtSignal
 from slifercal import slifercal as sliferCal
@@ -18,7 +18,7 @@ class myWidget(QtWidgets.QWidget):
         self.button_FSR= QtWidgets.QPushButton("Plot N most-stable regions")
         self.FSR_flavortext = QtWidgets.QLabel("Produces graphs from a given dataset based on\n the standard deviation of a slice of data that\n fits within certain temperature ranges.")
         self.button_CT = QtWidgets.QPushButton("Calibrate Thermistors")
-        self.CT_flavortext = QtWidgets.QLabel("Calibrates thermistors based off of graphs created by \"Plot N most-stable regions\" (UNSTABLE)")
+        self.CT_flavortext = QtWidgets.QLabel("Calibrates thermistors based off of graphs created by Plot N most-stable regions (UNSTABLE)")
         self.button_OV = QtWidgets.QPushButton("Date Viewer")
         self.OV_flavortext = QtWidgets.QLabel("Shows data between two dates selected by the user and automatically saves the plot in the working directory")
         self.df_path_init = QtWidgets.QLineEdit(self.data_file_location_init)
@@ -26,30 +26,39 @@ class myWidget(QtWidgets.QWidget):
         self.df_label = QtWidgets.QLabel("\n\nExperimental data file location")
 
         #Layout
+        """
+            Okay, So I don't know why, but although I have used this coordinate layout, with a symmetric number of positions in the QGrid
+                for some god-forsaken reason, PyQt refuses to produce something looking neat. So with that said, I have tried wrangling
+                this bit of code for the layout, but to no avail. To the future code-reviewer: Godspeed.            
+        """
         self.layout = QtWidgets.QGridLayout()
         self.layout.addWidget(self.button_keywords, 1, 0, 1, 1)
         self.layout.addWidget(self.button_FSR, 1, 1, 1, 2)
-        self.layout.addWidget(self.button_CT, 3, 0, 3, 2)
-        self.layout.addWidget(self.button_OV, 5,0,5,2)
-        self.layout.addWidget(self.df_path_init, 8,0,8,1)
-        self.layout.addWidget(self.df_browse, 8,1,8,2)
 
         self.layout.addWidget(self.keyword_flavortext, 2, 0, 2, 1)
         self.layout.addWidget(self.FSR_flavortext, 2, 1, 2, 2)
-        self.layout.addWidget(self.CT_flavortext,4, 0, 4, 2)
-        self.layout.addWidget(self.OV_flavortext, 6,0,6,2)
+
+        self.layout.addWidget(self.button_OV, 3,0,3,2)
+        self.layout.addWidget(self.OV_flavortext, 4,0,4,2)
+
+        self.layout.addWidget(self.button_CT, 5, 0, 5, 2)
+        self.layout.addWidget(self.CT_flavortext,6, 0, 6, 2)
+
+        self.layout.addWidget(self.df_path_init, 8,0,8,1)
+        self.layout.addWidget(self.df_browse, 8,1,8,2)
+
         self.layout.addWidget(self.df_label, 9,0)
         
 
         #Display
         self.window.setLayout(self.layout)
-        self.window.resize(600, 600)
+        self.window.resize(1200, 1200)
         self.window.show()
 
         #Trigger
-        self.button_OV.clicked.connect(self.omniview_splash)
         self.button_FSR.clicked.connect(self.fsr_splash)
         self.button_CT.clicked.connect(self.ct_splash)
+        self.button_OV.clicked.connect(self.omniview_splash)
         self.button_keywords.clicked.connect(self.keyword_splash)
         self.df_browse.clicked.connect(self.update_df)
 
@@ -179,6 +188,25 @@ class myWidget(QtWidgets.QWidget):
         self.keyword_browser_button.clicked.connect(self.browse_keyword)
 
     def omniview_splash(self):
+        sc_instance = sliferCal()
+        df = sc_instance.return_df()
+        for thermistor in self.df:
+            if thermistor != "Time" and thermistor not in thermistors:
+                to_drop.append(thermistor)
+        df.drop(labels=to_drop, axis=1, inplace=True)
+        urviving_columns = self.df.columns.to_list()
+
+        start_date = min(self.df['Time'])
+        end_date = max(self.df['Time'])
+        start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
+        end_index = self.df[self.df['Time']==end_date].index.to_list()[0]
+        max_datapoints = 3000
+
+
+
+        #################################
+        ####### BEGIN ACTUAL GUI ########
+        #################################
         self.window = QtWidgets.QWidget()
         self.window.resize(600, 600)
         try:
@@ -190,21 +218,23 @@ class myWidget(QtWidgets.QWidget):
         for element in self.thermistor_names:
             if element == "Comment" or element == "Time":
                 self.thermistor_names.remove(element)
+
+
         self.check_boxes = {}
-        self.title = QtWidgets.QLabel("Keyword Grapher")
+        self.title = QtWidgets.QLabel("Date Grapher")
         for thermistor in self.thermistor_names:
             self.check_boxes[thermistor] = QtWidgets.QCheckBox(thermistor)
-        self.keywords = QtWidgets.QLineEdit()
-        self.keywd_label = QtWidgets.QLabel("Enter keywords, seperated by commas without spaces:")
-        self.persistance = QtWidgets.QCheckBox("Persistance")
-        self.persistance.setChecked(True)
-        self.persistance_label = QtWidgets.QLabel("Querrying takes a fairly long time, that is why persistance is an option. If this persistance button is checked, the program will search for a\n"+" "*55+"previously calculated set of keyword hits, and attempt to produce graphs from that set.\n\n IF you are generating a NEW keyword set, UNCHECK the persistence setting, and the program will overwrite the previous set of keyword\n"+" "*130 +"hits.")
+
+
+        
+
+
+        self.save_graphs = QtWidgets.QCheckBox("Save Graphs?")
+        self.save_graphs.setChecked(True)
+        self.save_graphs_label = QtWidgets.QLabel("Querrying takes a fairly long time, would you like to automatically save the graphs? Or simply view them in memory?")
         self.GO = QtWidgets.QPushButton("Start plotting")
-        self.keyword_browser_button = QtWidgets.QPushButton("Browse")
-        self.keyword_path = self.working_directory+'/'+"keyword_persistence.pk"+'\t'*4+"(Default)"
-        self.keyword_browse_path = QtWidgets.QLineEdit(self.keyword_path)
-        self.keyword_browse_path.setReadOnly(True)
-        self.graphing_in_progress = QtWidgets.QLabel("")
+        
+
 
 
         self.layout = QtWidgets.QGridLayout()
@@ -221,27 +251,24 @@ class myWidget(QtWidgets.QWidget):
                 continue
             col += 1
         row += 1
-        self.layout1.addWidget(self.persistance, row, 4, row, 7)
-        self.layout1.addWidget(self.persistance_label, row+4, 1, row+4, 7)
+        self.layout1.addWidget(self.save_graphs, row, 4, row, 7)
+        self.layout1.addWidget(self.save_graphs_label, row+4, 1, row+4, 7)
         self.layout.addLayout(self.layout1, 1, 0, 1, 7)
         row += 1
-        self.layout.addWidget(self.keywd_label, row, 0, row, 1)
-        self.layout.addWidget(self.keywords, row, 2, row, 7)
-        row+=1
-        self.layout.addWidget(self.keyword_browse_path, row, 0 ,row, 4)
-        self.layout.addWidget(self.keyword_browser_button, row, 5, row, 7)
 
-        row += 1
+        #self.layout.addWidget(self.keyword_browse_path, row, 0 ,row, 4)
+        #self.layout.addWidget(self.keyword_browser_button, row, 5, row, 7)
+
+        #row += 1
         self.layout.addWidget(self.GO, row, 6, row, 7) 
-        row += 1
-        self.layout.addWidget(self.graphing_in_progress, row, 0, row+3, 7)
-        self.graphing_in_progress.hide()
+        #row += 1
+        #self.layout.addWidget(self.graphing_in_progress, row, 0, row+3, 7)
+
 
         self.window.setLayout(self.layout)
         self.window.show()
 
-        self.GO.clicked.connect(self.keyword_exec)
-        self.keyword_browser_button.clicked.connect(self.browse_keyword)
+        self.GO.clicked.connect(self.omni_exec)
 
 
     def browse_keyword(self):

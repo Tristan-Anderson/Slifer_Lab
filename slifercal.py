@@ -6,6 +6,8 @@ import _pickle as pickle
 import matplotlib
 from matplotlib import pyplot as plt
 import gc
+
+# Matplotlib is the slowest thing in here.
 plt.style.use('fast')
 
 class slifercal(object):
@@ -403,7 +405,11 @@ class slifercal(object):
                 for cut, row in self.keeper_data[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, avg_bars=True, keywords=["waves", "mm", "microwaves", "vna"])
 
-    def omniview_gui(self, ys,ms,ds,Hs,Ms,Ss,yf,mf,df,Hf,Mf,Sf):
+    def return_df(self):
+        self.__read_data()
+        return self.df
+
+    def omniview_gui(self, ys,ms,ds,Hs,Ms,Ss,yf,mf,df,Hf,Mf,Sf, save_fig=False):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #       
@@ -417,6 +423,10 @@ class slifercal(object):
             self.df
         except AttributeError:
             self.__read_data()
+
+        if save_fig == True:
+            pass
+            #graph.
 
     def omniview_in_terminal(self,thermistors=[]):
 
