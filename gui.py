@@ -1,7 +1,13 @@
-import sys, random, os, pandas
+import sys, random, os, pandas, datetime
 from PySide2 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import QObject, pyqtSignal
 from slifercal import slifercal as sliferCal
+
+def daterange(start, end):
+    dayz = []
+    for n in range(int((end - start).days)+1):
+        dayz.append(start + datetime.timedelta(n))
+    return dayz
 
 class myWidget(QtWidgets.QWidget):
     def __init__(self):
@@ -190,18 +196,12 @@ class myWidget(QtWidgets.QWidget):
     def omniview_splash(self):
         sc_instance = sliferCal()
         df = sc_instance.return_df()
-        for thermistor in self.df:
-            if thermistor != "Time" and thermistor not in thermistors:
-                to_drop.append(thermistor)
-        df.drop(labels=to_drop, axis=1, inplace=True)
-        urviving_columns = self.df.columns.to_list()
+        start_date = min(df['Time'])
+        end_date = max(df['Time'])
+        datebar_entries = daterange(start_date,end_date)
 
-        start_date = min(self.df['Time'])
-        end_date = max(self.df['Time'])
-        start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
-        end_index = self.df[self.df['Time']==end_date].index.to_list()[0]
-        max_datapoints = 3000
-
+        hrs = [str(i) for i in range(0,25)]
+        minutes = [str(i) for i in range(0,61)]
 
 
         #################################
@@ -225,17 +225,44 @@ class myWidget(QtWidgets.QWidget):
         for thermistor in self.thermistor_names:
             self.check_boxes[thermistor] = QtWidgets.QCheckBox(thermistor)
 
-
         
+        self.startdate_pulldown = QtWidgets.QComboBox()
+        self.starthrs_pulldown = QtWidgets.QComboBox()
+        self.startmin_pulldown = QtWidgets.QComboBox()
+        self.startsec_pulldown = QtWidgets.QComboBox()
 
+        self.enddate_pulldown = QtWidgets.QComboBox()
+        self.endhrs_pulldown = QtWidgets.QComboBox()
+        self.endmin_pulldown = QtWidgets.QComboBox()
+        self.endsec_pulldown = QtWidgets.QComboBox()
+        #print(datebar_entries)
+        for date in datebar_entries:
+            self.startdate_pulldown.addItem(date.strftime("%Y-%m-%d"))
+            self.enddate_pulldown.addItem(date.strftime("%Y-%m-%d"))
+        for hr in hrs:
+            self.starthrs_pulldown.addItem(hr)
+            self.endhrs_pulldown.addItem(hr)
+        for mint in minutes:
+            self.endmin_pulldown.addItem(mint)
+            self.endsec_pulldown.addItem(mint)
+            self.startmin_pulldown.addItem(mint)
+            self.startsec_pulldown.addItem(mint)
 
-        self.save_graphs = QtWidgets.QCheckBox("Save Graphs?")
+        self.startdate_flavortext = QtWidgets.QLabel("Datafile's start date: "+start_date.strftime("%Y-%m-%d %H:%M:%S"))
+        self.enddate_flavortext = QtWidgets.QLabel("Datafile's end date: "+end_date.strftime("%Y-%m-%d %H:%M:%S"))
+        self.start_flavortext = QtWidgets.QLabel("User Plotting Start Date")
+        self.end_flavortext = QtWidgets.QLabel("User Plotting End Date")
+
+        self.date_flavortext = QtWidgets.QLabel("Date")
+        self.hr_flavortext = QtWidgets.QLabel("Hour")
+        self.min_flavortext = QtWidgets.QLabel("Minute")
+        self.sec_flavortext = QtWidgets.QLabel("Second")
+         
+        self.save_graphs = QtWidgets.QCheckBox("Save Graph Only?")
         self.save_graphs.setChecked(True)
         self.save_graphs_label = QtWidgets.QLabel("Querrying takes a fairly long time, would you like to automatically save the graphs? Or simply view them in memory?")
         self.GO = QtWidgets.QPushButton("Start plotting")
         
-
-
 
         self.layout = QtWidgets.QGridLayout()
         self.title.setStyleSheet("font: 15pt Comic Sans MS")
@@ -247,29 +274,42 @@ class myWidget(QtWidgets.QWidget):
             self.layout1.addWidget(self.check_boxes[key], row, col)
             if col >= 8:
                 col = 0
-                row += 1
+                row += 1;
                 continue
             col += 1
         row += 1
         self.layout1.addWidget(self.save_graphs, row, 4, row, 7)
         self.layout1.addWidget(self.save_graphs_label, row+4, 1, row+4, 7)
-        self.layout.addLayout(self.layout1, 1, 0, 1, 7)
+        self.layout.addLayout(self.layout1, 1, 0, 1, 9)
         row += 1
 
-        #self.layout.addWidget(self.keyword_browse_path, row, 0 ,row, 4)
-        #self.layout.addWidget(self.keyword_browser_button, row, 5, row, 7)
-
-        #row += 1
+        self.layout.addWidget(self.startdate_flavortext, row, 0)
+        self.layout.addWidget(self.enddate_flavortext, row, 4)
+        row += 1
+        self.layout.addWidget(self.date_flavortext,row,1,row,3)
+        self.layout.addWidget(self.hr_flavortext,row,4,row,5)
+        self.layout.addWidget(self.min_flavortext,row,6,row,7)
+        self.layout.addWidget(self.sec_flavortext,row,8,row,9)
+        row += 1 
+        self.layout.addWidget(self.start_flavortext, row, 0, row, 1)  
+        self.layout.addWidget(self.startdate_pulldown, row, 1, row, 3)
+        self.layout.addWidget(self.starthrs_pulldown, row, 4, row, 5)
+        self.layout.addWidget(self.startmin_pulldown, row, 6, row, 7)
+        self.layout.addWidget(self.startsec_pulldown, row, 8, row, 9)
+        row += 1
+        self.layout.addWidget(self.end_flavortext, row, 0, row, 1)  
+        self.layout.addWidget(self.enddate_pulldown, row, 1, row, 3)
+        self.layout.addWidget(self.endhrs_pulldown, row, 4, row, 5)
+        self.layout.addWidget(self.endmin_pulldown, row, 6, row, 7)
+        self.layout.addWidget(self.endsec_pulldown, row, 8, row, 9)
+        row += 1
         self.layout.addWidget(self.GO, row, 6, row, 7) 
-        #row += 1
-        #self.layout.addWidget(self.graphing_in_progress, row, 0, row+3, 7)
-
+        
 
         self.window.setLayout(self.layout)
         self.window.show()
 
         self.GO.clicked.connect(self.omni_exec)
-
 
     def browse_keyword(self):
         self.keyword_path, _ = QtWidgets.QFileDialog.getOpenFileName(self.window, 'Open File', self.working_directory, '*.pk')
@@ -292,7 +332,7 @@ class myWidget(QtWidgets.QWidget):
         if self.persistance.isChecked():
             persistance = True
         self.window.close()
-        instance = sliferCal(processes=0, datafile_location=self.df_path, logbook_datafile_location=None)
+        instance = sliferCal(datafile_location=self.df_path)
         instance.keyword(keywords, thermistors=thermistors, persistance=persistance)
 
     def fsr_exec(self):
@@ -302,7 +342,19 @@ class myWidget(QtWidgets.QWidget):
 
 
     def omni_exec(self):
-        pass
+        self.window.update()
+        print(self.startdate_pulldown.currentText())
+        self.startdate = datetime.datetime.strptime(str(self.startdate_pulldown.currentText()), "%Y-%m-%d") + datetime.timedelta(hours=int(str(self.starthrs_pulldown.currentText())),minutes=int(str(self.startmin_pulldown.currentText())),seconds=int(str(self.startsec_pulldown.currentText())))
+        self.enddate = datetime.datetime.strptime(str(self.enddate_pulldown.currentText()), "%Y-%m-%d") + datetime.timedelta(hours=int(str(self.endhrs_pulldown.currentText())),minutes=int(str(self.endmin_pulldown.currentText())),seconds=int(str(self.endsec_pulldown.currentText())))
+        
+        thermistors = self.get_thermistor_checkbox_states()
+        savegraphs = False
+        if self.save_graphs.isChecked():
+            savegraphs = True
+        instance = sliferCal(datafile_location=self.df_path)
+        instance.omniview_gui(self.startdate,self.enddate,thermistors,savegraphs)
+        # END LOOP
+        self.omniview_splash()
 
     def get_thermistor_checkbox_states(self):
         checked = []

@@ -409,25 +409,65 @@ class slifercal(object):
         self.__read_data()
         return self.df
 
-    def omniview_gui(self, ys,ms,ds,Hs,Ms,Ss,yf,mf,df,Hf,Mf,Sf, save_fig=False):
+    def omniview_gui(self, user_start, user_end, thermistors, save_fig=False):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #       
-        #
-        #
-        start_date = datetime.date(ys,ms,ds)
-        start_date = start_date.timedelta(hours=Hs, minutes=Ms, seconds=Ss)
-        end_date = datetime.date(yf,mf,df)
-        end_date = end_date.timedelta(hours=Hf, minutes=Mf, seconds=Sf)
         try:
             self.df
         except AttributeError:
             self.__read_data()
 
-        if save_fig == True:
-            pass
-            #graph.
+        to_drop = []
+        for thermistor in self.df:
+            if thermistor != "Time" and thermistor not in thermistors:
+                to_drop.append(thermistor)
+        self.df.drop(labels=to_drop, axis=1, inplace=True)
+        surviving_columns = self.df.columns.to_list()
+        start_date = min(self.df['Time'])
+        end_date = max(self.df['Time'])
+        start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
+        end_index = self.df[self.df['Time']==end_date].index.to_list()[0]
+        max_datapoints = 3000
 
+        fig = plt.figure(figsize=(16,9), dpi=300)
+        canvas = fig.add_subplot(111)
+
+        # __nearest(self, test_val, iterable)
+        print("Locating nearest raw data-frame start index from user provided time")
+        data_start_index = self.df[self.df['Time'] == self.__nearest(user_start, self.df['Time'])].index.to_list()[0]
+        print("Start index located.", data_start_index)
+        print("Locating nearest raw data-frame end index from user provided time")
+        data_end_index = self.df[self.df['Time'] == self.__nearest(user_end, self.df['Time'])].index.to_list()[0]
+        print("End index located.", data_end_index)
+        delta = data_end_index-data_start_index
+        index_modulus = (delta*(len(surviving_columns)-1))/max_datapoints
+        if index_modulus <= 1:
+            data_slice = self.df.iloc[data_start_index:data_end_index:1]
+        else:
+            data_slice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
+        print(data_slice)
+        k = len(data_slice["Time"])
+        time_slice = data_slice["Time"]
+        print(time_slice)
+        data_slice.drop("Time", axis=1, inplace=True)
+        print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
+        
+        plt.title("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
+        canvas.set_xlabel("Time")
+        canvas.set_ylabel("Resistance/Temperature")
+        for column in data_slice:
+            canvas.plot(time_slice,data_slice[column], label=column)
+        canvas.legend(loc='best')
+        if save_fig == True:
+            plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
+        else:
+            plt.show()
+    
+    
+        plt.close('all')
+        plt.clf()
+        gc.collect()
     def omniview_in_terminal(self,thermistors=[]):
 
         #       
