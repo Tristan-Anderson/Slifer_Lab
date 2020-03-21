@@ -729,7 +729,10 @@ class slifercal(object):
             logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
             logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
             
-            canvas = self.__commenter(canvas, logbook_slice)
+            canvas, graph = self.__commenter(canvas, graph, logbook_slice, 
+                                             df_xslice, rng_ss, keywords, 
+                                             rng_ee, avg, dpi_val=dpi_val
+                                             )
 
             graph.set_xlim(left=self.df.loc[rng_start, "Time"], right=self.df.loc[rng_end, "Time"])
             graph.set_title(thermistor+"_"+temperature+"_in_range_"+str(nth_range)+"_"+extra)
@@ -749,7 +752,20 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
 
-    def __commenter(self, canvas, logbook_slice):
+    def __commenter(self, canvas, graph, logbook_slice, df_xslice, rng_ss, keywords, rng_ee, avg, dpi_val=300):
+        fig_x_dim = 32
+        fig_y_dim = 18
+        fig_x_basic_info = (0.25/16)*fig_x_dim
+        fig_y_basic_info = (8.1/9)*fig_y_dim
+        fig_x_end_range_data = (13/16)*fig_x_dim
+        fig_x_start_range_data = (1.75/16)*fig_x_dim
+        fig_y_range_data = (4.3/9)*fig_y_dim
+        fig_x_logbook_comment = (0.25/16)*fig_x_dim
+        fig_y_logbook_comment = (4.25/9)*fig_y_dim
+        fig_x_timestamp = (0.25/16)*fig_x_dim
+        fig_y_anchor_timestamp = (4.1/9)*fig_y_dim
+        fig_y_step_timestamp = (.15/18)*fig_y_dim
+        fig_x_comment_start = (1.2/16)*fig_x_dim
         avg_comments = []
         poi = True
         v = 0
@@ -824,7 +840,7 @@ class slifercal(object):
             v = old_v
             v += 1
 
-            return canvas
+            return canvas, graph
 
 
     def convert_df_yslice(self, thermistor, data):
