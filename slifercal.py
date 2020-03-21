@@ -749,7 +749,7 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
 
-    def __commenter(canvas, logbook_slice):
+    def __commenter(self, canvas, logbook_slice):
         avg_comments = []
         poi = True
         v = 0
