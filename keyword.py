@@ -2,4 +2,4 @@ from slifercal import slifercal as sc
 
 k = sc()
 
-k.plot_top_n_ranges()
+k.keyword(keywords=['vna', 'mm-waves', 'TE', 'Polarization'], persistance=True)
