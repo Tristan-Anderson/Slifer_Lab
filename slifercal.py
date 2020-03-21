@@ -413,6 +413,7 @@ class slifercal(object):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #       
+        
         try:
             self.df
         except AttributeError:
@@ -429,45 +430,46 @@ class slifercal(object):
         start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
         end_index = self.df[self.df['Time']==end_date].index.to_list()[0]
         max_datapoints = 3000
+        if (user_start < end_date and user_start < user_end) and (user_start >= start_date and user_end <= end_date):
+            fig = plt.figure(figsize=(16,9), dpi=300)
+            canvas = fig.add_subplot(111)
 
-        fig = plt.figure(figsize=(16,9), dpi=300)
-        canvas = fig.add_subplot(111)
-
-        # __nearest(self, test_val, iterable)
-        print("Locating nearest raw data-frame start index from user provided time")
-        data_start_index = self.df[self.df['Time'] == self.__nearest(user_start, self.df['Time'])].index.to_list()[0]
-        print("Start index located.", data_start_index)
-        print("Locating nearest raw data-frame end index from user provided time")
-        data_end_index = self.df[self.df['Time'] == self.__nearest(user_end, self.df['Time'])].index.to_list()[0]
-        print("End index located.", data_end_index)
-        delta = data_end_index-data_start_index
-        index_modulus = (delta*(len(surviving_columns)-1))/max_datapoints
-        if index_modulus <= 1:
-            data_slice = self.df.iloc[data_start_index:data_end_index:1]
+            # __nearest(self, test_val, iterable)
+            print("Locating nearest raw data-frame start index from user provided time")
+            data_start_index = self.df[self.df['Time'] == self.__nearest(user_start, self.df['Time'])].index.to_list()[0]
+            print("Start index located.", data_start_index)
+            print("Locating nearest raw data-frame end index from user provided time")
+            data_end_index = self.df[self.df['Time'] == self.__nearest(user_end, self.df['Time'])].index.to_list()[0]
+            print("End index located.", data_end_index)
+            delta = data_end_index-data_start_index
+            index_modulus = (delta*(len(surviving_columns)-1))/max_datapoints
+            if index_modulus <= 1:
+                data_slice = self.df.iloc[data_start_index:data_end_index:1]
+            else:
+                data_slice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
+            print(data_slice)
+            k = len(data_slice["Time"])
+            time_slice = data_slice["Time"]
+            print(time_slice)
+            data_slice.drop("Time", axis=1, inplace=True)
+            print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
+            
+            plt.title("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
+            canvas.set_xlabel("Time")
+            canvas.set_ylabel("Resistance/Temperature")
+            for column in data_slice:
+                canvas.plot(time_slice,data_slice[column], label=column)
+            canvas.legend(loc='best')
+            if save_fig == True:
+                plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
+            else:
+                plt.show()
         else:
-            data_slice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
-        print(data_slice)
-        k = len(data_slice["Time"])
-        time_slice = data_slice["Time"]
-        print(time_slice)
-        data_slice.drop("Time", axis=1, inplace=True)
-        print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
-        
-        plt.title("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
-        canvas.set_xlabel("Time")
-        canvas.set_ylabel("Resistance/Temperature")
-        for column in data_slice:
-            canvas.plot(time_slice,data_slice[column], label=column)
-        canvas.legend(loc='best')
-        if save_fig == True:
-            plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
-        else:
-            plt.show()
-    
-    
+            print("Bad Date selection.")
         plt.close('all')
         plt.clf()
         gc.collect()
+        
     def omniview_in_terminal(self,thermistors=[]):
 
         #       
@@ -500,7 +502,7 @@ class slifercal(object):
             print("Select An end Date in the form: \"yyyy-mm-dd HH:MM:SS\"")
             user_end = datetime.datetime.strptime(input("Your Date: "), "%Y-%m-%d %H:%M:%S")
 
-            if user_start < end_date and user_start >= start_date and user_end <= end_date and user_start <= user_end:
+            if (user_start < end_date and user_start < user_end) and (user_start >= start_date and user_end <= end_date):
                 fig = plt.figure(figsize=(16,9), dpi=300)
                 canvas = fig.add_subplot(111)
 
@@ -531,7 +533,6 @@ class slifercal(object):
                     canvas.plot(time_slice,data_slice[column], label=column)
                 canvas.legend(loc='best')
                 plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
-                plt.show()
                 
 
                 plt.close('all')
@@ -539,7 +540,7 @@ class slifercal(object):
                 gc.collect()
             else:
                 print('Bad input')
-                exit()
+                return False
 
 
 

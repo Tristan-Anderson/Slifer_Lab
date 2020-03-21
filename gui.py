@@ -248,8 +248,8 @@ class myWidget(QtWidgets.QWidget):
             self.startmin_pulldown.addItem(mint)
             self.startsec_pulldown.addItem(mint)
 
-        self.startdate_flavortext = QtWidgets.QLabel("Datafile's start date: "+start_date.strftime("%Y-%m-%d %H:%M:%S"))
-        self.enddate_flavortext = QtWidgets.QLabel("Datafile's end date: "+end_date.strftime("%Y-%m-%d %H:%M:%S"))
+        self.startdate_flavortext = QtWidgets.QLabel("\n\n\nDatafile's start date: "+start_date.strftime("%Y-%m-%d %H:%M:%S"))
+        self.enddate_flavortext = QtWidgets.QLabel("\n\n\nDatafile's end date: "+end_date.strftime("%Y-%m-%d %H:%M:%S"))
         self.start_flavortext = QtWidgets.QLabel("User Plotting Start Date")
         self.end_flavortext = QtWidgets.QLabel("User Plotting End Date")
 
