@@ -409,7 +409,7 @@ class slifercal(object):
         self.__read_data()
         return self.df
 
-    def omniview_gui(self, user_start, user_end, thermistors, comments=True, save_fig=False, dpi_val=150):
+    def omniview_gui(self, user_start, user_end, thermistors, comments=False, save_fig=False, dpi_val=150):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #       
@@ -442,12 +442,19 @@ class slifercal(object):
         end_date = max(self.df['Time'])
         start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
         end_index = self.df[self.df['Time']==end_date].index.to_list()[0]
-        max_datapoints = 5000
+        max_datapoints = 3000
 
         if user_start < user_end:
             fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
-            canvas = fig.add_subplot(111)
-            graph = fig.add_subplot(211)
+            if comments:
+                print("Comments have been turned on")
+                canvas = fig.add_subplot(111)
+                graph = fig.add_subplot(211)
+                footnotes = fig.add_subplot(212)
+                footnotes.axis('off')
+                canvas.axis('off')
+            else:
+                graph = fig.add_subplot(111)
             
 
             # __nearest(self, test_val, iterable)
@@ -465,16 +472,12 @@ class slifercal(object):
                 df_yslice = self.df.iloc[data_start_index:data_end_index:1]
             else:
                 df_yslice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
+            ycut = df_yslice.drop("Time", axis=1, inplace=True)
+            df_xslice = self.df.loc[df_yslice.index.tolist(),"Time"]
             
-            df_xslice = df_yslice["Time"]
-            df_yslice.drop("Time", axis=1, inplace=True)
             k = len(df_xslice)
             
             if comments:
-                print("Comments have been turned on")
-                footnotes = fig.add_subplot(212)
-                footnotes.axis('off')
-                canvas.axis('off')
                 print("Querrying Logbook start")
                 logbook_start = self.__nearest(user_start, self.logbook_df["Time"])
                 print("Querrying Logbook end")
@@ -490,11 +493,11 @@ class slifercal(object):
 
 
             print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
-            plt.title("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
+            graph.title.set_text("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
             graph.set_xlabel("Time")
             
             for column in df_yslice:
-                graph.plot(df_xslice,df_yslice, label=column)
+                graph.plot(df_xslice,df_yslice[column], label=column)
 
             graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
             graph.xaxis_date()
@@ -502,7 +505,10 @@ class slifercal(object):
 
 
             if save_fig == True:
-                plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
+                if comments:
+                    plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_")+"wc")
+                else:
+                    plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
             else:
                 plt.show()
         else:
@@ -717,7 +723,6 @@ class slifercal(object):
                         print("No comments have been provided in either the logbook_data.csv, or datafile.")
                         exit()
 
-
             canvas.annotate(
                 "Logbook comments:",
                 xy=(fig_x_logbook_comment*dpi_val,fig_y_logbook_comment*dpi_val),
@@ -793,6 +798,9 @@ class slifercal(object):
             return True
 
     def __commenter(self, canvas, graph, logbook_slice, df_xslice, rng_ss=0, keywords=[], rng_ee=0, avg=0, dpi_val=300):
+        # THERE IS CURRENTLY A BUG WHERE IF COMMENTS ARE SET TO TRUE, IN THE GUI DATE-GRAPHER THIS THING WILL DROP TIMESTAMPS
+        # ON THE COMMENTS OF THE FIGURES. I HAVE YET TO FIND OUT WHAT IS CAUSING THAT, BUT FOR NOW THE PROGRAM WORKS. 
+        #
         fig_x_dim = 32
         fig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim

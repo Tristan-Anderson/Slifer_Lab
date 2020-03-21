@@ -200,7 +200,7 @@ class myWidget(QtWidgets.QWidget):
         end_date = max(df['Time'])
         datebar_entries = daterange(start_date,end_date)
 
-        hrs = [str(i) for i in range(0,25)]
+        hrs = [str(i) for i in range(0,24)]
         minutes = [str(i) for i in range(0,61)]
 
 
@@ -260,6 +260,8 @@ class myWidget(QtWidgets.QWidget):
          
         self.save_graphs = QtWidgets.QCheckBox("Save Graph Only?")
         self.save_graphs.setChecked(True)
+        self.add_comments = QtWidgets.QCheckBox("Plot with Comments?")
+        self.add_comments.setChecked(False)
         self.save_graphs_label = QtWidgets.QLabel("Querrying takes a fairly long time, would you like to automatically save the graphs? Or simply view them in memory?")
         self.GO = QtWidgets.QPushButton("Start plotting")
         
@@ -278,7 +280,8 @@ class myWidget(QtWidgets.QWidget):
                 continue
             col += 1
         row += 1
-        self.layout1.addWidget(self.save_graphs, row, 4, row, 7)
+        self.layout1.addWidget(self.save_graphs, row, 1, row, 3)
+        self.layout1.addWidget(self.add_comments, row, 4, row, 7)
         self.layout1.addWidget(self.save_graphs_label, row+4, 1, row+4, 7)
         self.layout.addLayout(self.layout1, 1, 0, 1, 9)
         row += 1
@@ -351,8 +354,11 @@ class myWidget(QtWidgets.QWidget):
         savegraphs = False
         if self.save_graphs.isChecked():
             savegraphs = True
+        comments = False
+        if self.add_comments.isChecked():
+            comments = True
         instance = sliferCal(datafile_location=self.df_path)
-        instance.omniview_gui(self.startdate,self.enddate,thermistors,save_fig=savegraphs)
+        instance.omniview_gui(self.startdate,self.enddate,thermistors,save_fig=savegraphs, comments=comments)
         # END LOOP
         self.omniview_splash()
 
