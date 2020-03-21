@@ -352,7 +352,7 @@ class myWidget(QtWidgets.QWidget):
         if self.save_graphs.isChecked():
             savegraphs = True
         instance = sliferCal(datafile_location=self.df_path)
-        instance.omniview_gui(self.startdate,self.enddate,thermistors,savegraphs)
+        instance.omniview_gui(self.startdate,self.enddate,thermistors,save_fig=savegraphs)
         # END LOOP
         self.omniview_splash()
 

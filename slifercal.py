@@ -409,11 +409,24 @@ class slifercal(object):
         self.__read_data()
         return self.df
 
-    def omniview_gui(self, user_start, user_end, thermistors, save_fig=False):
+    def omniview_gui(self, user_start, user_end, thermistors, comments=True, save_fig=False, dpi_val=150):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #       
-        
+        fig_x_dim = 32
+        fig_y_dim = 18
+        fig_x_basic_info = (0.25/16)*fig_x_dim
+        fig_y_basic_info = (8.1/9)*fig_y_dim
+        fig_x_end_range_data = (13/16)*fig_x_dim
+        fig_x_start_range_data = (1.75/16)*fig_x_dim
+        fig_y_range_data = (4.3/9)*fig_y_dim
+        fig_x_logbook_comment = (0.25/16)*fig_x_dim
+        fig_y_logbook_comment = (4.25/9)*fig_y_dim
+        fig_x_timestamp = (0.25/16)*fig_x_dim
+        fig_y_anchor_timestamp = (4.1/9)*fig_y_dim
+        fig_y_step_timestamp = (.15/18)*fig_y_dim
+        fig_x_comment_start = (1.2/16)*fig_x_dim
+
         try:
             self.df
         except AttributeError:
@@ -429,10 +442,13 @@ class slifercal(object):
         end_date = max(self.df['Time'])
         start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
         end_index = self.df[self.df['Time']==end_date].index.to_list()[0]
-        max_datapoints = 3000
-        if (user_start < end_date and user_start < user_end) and (user_start >= start_date and user_end <= end_date):
-            fig = plt.figure(figsize=(16,9), dpi=300)
+        max_datapoints = 5000
+
+        if user_start < user_end:
+            fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
             canvas = fig.add_subplot(111)
+            graph = fig.add_subplot(211)
+            
 
             # __nearest(self, test_val, iterable)
             print("Locating nearest raw data-frame start index from user provided time")
@@ -443,36 +459,62 @@ class slifercal(object):
             print("End index located.", data_end_index)
             delta = data_end_index-data_start_index
             index_modulus = (delta*(len(surviving_columns)-1))/max_datapoints
-            if index_modulus <= 1:
-                data_slice = self.df.iloc[data_start_index:data_end_index:1]
-            else:
-                data_slice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
-            print(data_slice)
-            k = len(data_slice["Time"])
-            time_slice = data_slice["Time"]
-            print(time_slice)
-            data_slice.drop("Time", axis=1, inplace=True)
-            print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
+
             
+            if index_modulus <= 1:
+                df_yslice = self.df.iloc[data_start_index:data_end_index:1]
+            else:
+                df_yslice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
+            
+            df_xslice = df_yslice["Time"]
+            df_yslice.drop("Time", axis=1, inplace=True)
+            k = len(df_xslice)
+            
+            if comments:
+                print("Comments have been turned on")
+                footnotes = fig.add_subplot(212)
+                footnotes.axis('off')
+                canvas.axis('off')
+                print("Querrying Logbook start")
+                logbook_start = self.__nearest(user_start, self.logbook_df["Time"])
+                print("Querrying Logbook end")
+                logbook_end = self.__nearest(user_end, self.logbook_df["Time"])
+                logbook_start_index = self.logbook_df[self.logbook_df["Time"] == logbook_start].index[0]
+                logbook_end_index = self.logbook_df[self.logbook_df["Time"] == logbook_end].index[0]
+                logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
+                print("Commenting Graph.")
+                canvas, graph = self.__commenter(canvas, graph, logbook_slice, 
+                                             df_xslice, rng_ss=data_start_index, 
+                                             rng_ee=data_end_index, avg=90, dpi_val=dpi_val
+                                             )
+
+
+            print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
             plt.title("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
-            canvas.set_xlabel("Time")
-            canvas.set_ylabel("Resistance/Temperature")
-            for column in data_slice:
-                canvas.plot(time_slice,data_slice[column], label=column)
-            canvas.legend(loc='best')
+            graph.set_xlabel("Time")
+            
+            for column in df_yslice:
+                graph.plot(df_xslice,df_yslice, label=column)
+
+            graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+            graph.xaxis_date()
+            graph.legend(loc='best')
+
+
             if save_fig == True:
                 plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
             else:
                 plt.show()
         else:
             print("Bad Date selection.")
+
         plt.close('all')
         plt.clf()
         gc.collect()
 
     def omniview_in_terminal(self,thermistors=[]):
 
-        #       
+        #       DEPRICATED, but still useful if devloping.
         #       Terminal in-memory way of viewing data from a particular timerange
         #
         try:
@@ -532,6 +574,7 @@ class slifercal(object):
                 for column in data_slice:
                     canvas.plot(time_slice,data_slice[column], label=column)
                 canvas.legend(loc='best')
+                
                 plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
                 
 
@@ -542,9 +585,6 @@ class slifercal(object):
                 print('Bad input')
                 return False
 
-
-
-    
     def plot_top_n_ranges(self, n=10, comments=True):
         self.__find_top_n_ranges(n=n)
         for thermistor in self.n_best:
@@ -752,7 +792,7 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
 
-    def __commenter(self, canvas, graph, logbook_slice, df_xslice, rng_ss, keywords, rng_ee, avg, dpi_val=300):
+    def __commenter(self, canvas, graph, logbook_slice, df_xslice, rng_ss=0, keywords=[], rng_ee=0, avg=0, dpi_val=300):
         fig_x_dim = 32
         fig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim
@@ -773,6 +813,7 @@ class slifercal(object):
         was = False
         shift = False
         shift_2 = False
+        trip = True
         for index, row in logbook_slice.iterrows():
             modified_comment, y = self.graph_comment_formater(row["Comment"])
             v += y
@@ -789,23 +830,29 @@ class slifercal(object):
                     fig_x_comment_start += 10.7
                     fig_x_timestamp += 10.7
                     shift_2 = True
+                
                 if v > 108:
                     v -= 108
                     n -= 108
                 else:
                     v -= 55
                     n -= 55
-            if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
-                canvas.annotate(
-                    timestamp, 
-                    xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
-                    xycoords='figure pixels', color="green") 
-                avg_comments.append(n)
-            else:
-                canvas.annotate(
-                    timestamp, 
-                    xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
-                    xycoords='figure pixels')
+            try:
+                if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
+                    canvas.annotate(
+                        timestamp, 
+                        xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
+                        xycoords='figure pixels', color="green") 
+                    avg_comments.append(n)
+                else:
+                    canvas.annotate(
+                        timestamp, 
+                        xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
+                        xycoords='figure pixels')
+            except KeyError:
+                if trip:
+                    print("WARNING: Slicing miss-match. IGNORE if using Date Grapher with comments.")
+                    trip = False
             n = old_n
             n += 1
             n += y
@@ -839,9 +886,11 @@ class slifercal(object):
                 have_i_printed = True
             v = old_v
             v += 1
+            if shift_2 and v > 200:
+                print("WARNING: Out of lab-book comment space on figure. Consider selecting a narrower plotting range if labbook comment insight is critical.")
+                return canvas,graph
 
-            return canvas, graph
-
+        return canvas, graph
 
     def convert_df_yslice(self, thermistor, data):
         thermistors_in_file = ["CCS.F1","CCS.F2","CCS.F3","CCS.F4","AB.F5", "AB.F6", "CCS.F7", "CCS.F8","CCS.F9","CCS.F10", "CCS.F11", "CCS.S1", "CCS.S2", "CCS.S3"]
