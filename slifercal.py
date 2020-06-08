@@ -22,6 +22,7 @@ class slifercal(object):
         self.name = def_name
         if processes == 0:
             self.processes = int(8*multiprocessing.cpu_count()/10)
+            print(self.processes, "Processing threads available")
         else:
             self.processes = processes
 
