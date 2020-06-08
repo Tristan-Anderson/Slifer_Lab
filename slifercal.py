@@ -25,7 +25,8 @@ class slifercal(object):
         else:
             self.processes = processes
 
-    def __cleandf(self):
+
+    def clean_experimental_data(self):
         ################################################
         """
            Basic data cleaning geared for thermometry
@@ -34,39 +35,36 @@ class slifercal(object):
         ################################################
         indexes_that_are_to_be_deleted = []
         rows_to_be_deleted = []
-        for title in self.df:
-            indexes_that_are_to_be_deleted.append(self.df[(self.df[title]=="#VALUE!")].index.tolist())
-            indexes_that_are_to_be_deleted.append(self.df[(self.df[title]=="Err:502")].index.tolist())
-        for l in indexes_that_are_to_be_deleted:
-            for entry in l:
-                if entry not in rows_to_be_deleted:
-                    rows_to_be_deleted.append(entry)
-        self.df = self.df.drop(rows_to_be_deleted, axis=0)
+        column_names = list(self.df)
+        column = ["Time"]
+
+        for name in self.df:
+            if '.R' in name and ('M' in name or '.F' in name) and "Ohms" in name: # Feature that allows user to throw in raw .csv of entire cooldown
+                    column.append(name)                         # Probably no longer necessary for Slifer Lab, but may be useful to
+        self.df = self.df[column]
+
         for index in self.df:
             if index != "Time":
                 self.df[index] = self.df[index].astype(float)   
-        column_names = list(self.df)
-        column =[]
-        for name in column_names:
-            if '.R' in name and ('.M' in name or '.F' in name): # Feature that allows user to throw in raw .csv of entire cooldown
-                    column.append(name)                         # Probably no longer necessary for Slifer Lab, but may be useful to
-            for name in column_names:                           # People who dont read documentation    
-                if name != 'Time' and name not in column:
-                    self.df.drop(columns=name)
+
+        self.df["Time"] = pandas.to_datetime(self.df["Time"])
+        #print(self.df)
+
         print("Experimental data is clean.")
+
 
     def complete_keyword(self, timeit, keywords, rangeshift=1, range_length=None):
         if timeit:
             readings = time.time()
-        self.__read_data()
+        self.load_experimental_data()
         if timeit:
             readingf=time.time()
             cleans = time.time()
-        self.__cleandf()
+        self.clean_experimental_data()
         if timeit:
             cleanf=time.time()
             analysiss = time.time()
-        self.__range_election(rangeshift=rangeshift, range_length=range_length)
+        self.range_election(rangeshift=rangeshift, range_length=range_length)
         if timeit:
             analysisf = time.time()
             plottings = time.time()
@@ -74,6 +72,7 @@ class slifercal(object):
         if timeit:
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
+
 
     def __debug_attribute(self, obj):
         ############################################
@@ -87,6 +86,7 @@ class slifercal(object):
             pprint.pprint(obj, fout)
         print("Printed object to file: debug.txt")
 
+
     def find_stable_regions(self, rangeshift=1):
         ##############################################
         """
@@ -94,12 +94,13 @@ class slifercal(object):
                     in kernels for graphing. 
                                                    """
         ##############################################
-        self.__read_data()
-        self.__cleandf()
-        self.__range_election(rangeshift=rangeshift)
+        self.load_experimental_data()
+        self.clean_experimental_data()
+        self.range_election(rangeshift=rangeshift)
         # Hi
     
-    def load_data(self, file_location=None):
+
+    def load_persistence_data(self, file_location=None):
         ###################################################
         """
            This can be used in many modes, but it really
@@ -111,12 +112,16 @@ class slifercal(object):
                    the instance from this method.
                                                         """
         ###################################################
-
+        # Loads persistence data
         if file_location == None:
+            
+            # If no persistence path was provided, search for one 
+
             print("No file path provided. Finding most recent pickle...")
             list_of_files = []
             desired_file = ""
             big_date = 0
+
             for file in os.listdir(os.getcwd()):
                 if file.endswith(".pk") and "keeper" in file:
                     list_of_files.append(file)
@@ -124,52 +129,68 @@ class slifercal(object):
                     if date > big_date:
                         big_date = int(date)
             big_date = str(big_date)
+
             for file in list_of_files:
                 if big_date in file:
                     self.kd_name = file
             print("Pickle found.  Reading file...")
+            
             try:
                 with open(self.kd_name, 'rb') as fin:
                     self.keeper_data = pickle.load(fin)
             except AttributeError:
                 print("No parsed datafile. Trying to search for datafile one last time.")
-                self.__read_data()
+                self.load_experimental_data()
+            
             print("File Read")
+
+
         elif file_location != None:
+            # If persistence path was provided
+            # Load it
             self.kd_name = file_location
             print("Reading file")
             with open(file_location, 'rb') as fin:
                 self.keeper_data = pickle.load(fin)
             print("File read")
 
+
     def __load_logbook(self):
         if self.logbook_datafile_location == None:
             print("No loogbook path was used to initalize the instance!\nAssuming logbook is \"logbook_data.csv\" \nSearching local directory:")
-            self.logbook_datafile_location = "logbook_data.csv"
-        with open(self.logbook_datafile_location,'r') as f:
-            self.logbook_df = pandas.read_csv(f, sep='\t')
-        self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
-        print("File found. Comments File loaded.")
+            self.logbook_datafile_location = "logbook.csv"
+        try:
+            with open(self.logbook_datafile_location,'r') as f:
+                self.logbook_df = pandas.read_csv(f, sep='\t')
+            self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
+            print("File found. Comments File loaded.")
+        except:
+            print("**WARNING: Logbook was not found.")
+            self.logbook_df = pandas.DataFrame(columns=["Time", "Comment"])
+
 
     def __nearest(self, test_val, iterable): 
         # In an interable data-structure, find the nearest to the 
         # value presented.
         return min(iterable, key=lambda x: abs(x - test_val))
 
+
     def keyword(self, keywords, thermistors=None, persistance=True, kelvin=False):
-        self.__read_data()
-        self.__cleandf()
+        self.load_experimental_data()
+        self.clean_experimental_data()
         self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance, kelvin=kelvin)
 
+
     def keyword_nearest(self, test_val, iterable, tag):
-        # Based on the __nearest() method, this does that, 
+        # Based on the __nearest() method, 
         # but returns the critical range information for our kernels.
         print("Looking for the nearest date to", test_val, "from logbook index", tag, "in raw-data file")
         nearest_time = min(iterable, key=lambda x: abs(x - test_val))
         df_index = self.df.index[self.df["Time"] == nearest_time][0]
         return [tag, nearest_time, df_index]
 
-    def __range_election(self, rangeshift=1, range_length=None):
+
+    def range_election(self, rangeshift=1, range_length=None):
         #############################################################
         """
                             This method slices
@@ -200,6 +221,7 @@ class slifercal(object):
         print("Dictionary pickled as :", 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk')
         self.kd_name = 'keeper_data_original_'+self.time_for_range_election_pickle+'.pk'
 
+
     def range_election_metric(self,column_name, rangeshift):
         #####################################################
         """
@@ -214,6 +236,7 @@ class slifercal(object):
         temp_LN2_dict = {}
         temp_LHe_dict = {}
         keeper_data = {}
+
         if column_name == "Time":
             print("Starting data analysis")
             return False
@@ -252,7 +275,20 @@ class slifercal(object):
                 "LHe":pandas.DataFrame.from_dict(temp_LHe_dict, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])} # Save data on thermistor; continue
             return keeper_data
 
-    def __read_data(self):
+
+    def import_datafile(self, datafile_location='', delimeter='\t'):
+        # Read Data
+        self.datafile_location = datafile_location
+        self.load_experimental_data(delimeter=delimeter)
+        self.clean_experimental_data()
+
+
+    def __ensuretime(self):
+        if type(self.df.loc[1, "Time"]) == numpy.float64: # If david did not convert time from 1904/12/31 20:00:00, then do the conversion and put it into datetime.
+            self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
+
+
+    def load_experimental_data(self, delimeter='\n', new=True):
         # Reads in the raw data, and find comments that goes with it.
         self.thermistor_names = []
         if self.datafile_location == None:
@@ -260,11 +296,26 @@ class slifercal(object):
                 "No datafile was used to initalize the instance!\
                 \nAssuming filename is \"data.csv\"")
             self.datafile_location = "data.csv"
+
+        datafile = [] 
         with open(self.datafile_location,'r') as f:
-            self.df = pandas.read_csv(f)
+            if new:
+                for index, line in enumerate(f):
+                    if index == 0:
+                        header = line.split('\t')[:-1]
+                        continue
+                    l = line.split('\t')
+                    datafile.append(l[:len(header)])
+                    
+                self.df = pandas.DataFrame(datafile, columns=header)
+            else:
+                self.df = pandas.read_csv(f, delimiter=delimeter)
+
+       
         print("File loaded.")
-        if type(self.df["Time"][1]) == numpy.float64: # If david did not convert time from 1904/12/31 20:00:00, then do the conversion and put it into datetime.
-            self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
+
+        self.__ensuretime()
+
         try:
             self.logbook_df = self.df['Time', "Comment"]
         except KeyError as e:
@@ -277,7 +328,8 @@ class slifercal(object):
             if column not in ["Time", "Comment"]:
                 self.thermistor_names.append(column)
 
-    def __find_top_n_ranges(self, n=10):
+
+    def find_top_n_ranges(self, n=10):
         ###############################################################
         """
            This is the self.keeper_data parser that sorts through 
@@ -294,8 +346,8 @@ class slifercal(object):
             print("Now you have the right data.")
         
         print("Searching for n-best...")
-        self.load_data()
-        self.__read_data()
+        self.load_persistence_data()
+        self.load_experimental_data()
         self.n_best = {}
 
         for thermistor in self.keeper_data:
@@ -309,6 +361,7 @@ class slifercal(object):
                 print("Located flattest", temperature, "datapoint for thermistor:", thermistor)
             self.n_best[thermistor] = calibration_list
 
+
     def find_keyword_hits(self, keywords, thermistors=None):
 
         #############################################################
@@ -320,10 +373,20 @@ class slifercal(object):
                 45 minutes of the center of each point
                 (This is an optimization problem that may 
                 never come to fruition)
+
+                "Dense"
+                    Pros :
+                        -Most ammount of information, least
+                            ammount of graphs
+                    Cons :
+                        -No longer have ability to scrutanize each
+                            instance
+
+
                                                                    """
         ##############################################################
         
-        self.__read_data()
+        self.load_experimental_data()
         self.keyword_hits = {}
         df_nearest_indices = []
         logbook_indices = [] # The indices of the logbook_df that contain keywords
@@ -339,7 +402,7 @@ class slifercal(object):
               "Queries over", len(self.df["Time"]), 
               "rows.\nExpecting 10k rows/s. Estimated time:", 
               (len(logbook_indices)/self.processes)*len(self.df["Time"])/(10000), "seconds.\n\n")
-        time.sleep(1)
+        time.sleep(0.5)
 
         if thermistors is not None:
             self.thermistor_names = thermistors
@@ -366,10 +429,12 @@ class slifercal(object):
                 kernel_dicts[result[0]] = [1, 1, result[2], result[2]]
             self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
 
+
     def __time_since_1904(self,sec): 
         # LabVIEW conveniently used seconds from "1 January, 1904" as time-stamp.
-        self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # I saw a -4 hour time difference.
-        return self.begining_of_time + datetime.timedelta(seconds=sec) # This returns a "Ballpark" time. Its probably not accruate to the second, but it is definately accurate to the hour.
+        self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # Ellie noted a -4 hour time difference from UTC.
+        return self.begining_of_time + datetime.timedelta(seconds=sec) # Assume accuracy no finer than a minute.
+
     
     def __time_steps_suck(self):
         ######################################
@@ -383,31 +448,35 @@ class slifercal(object):
         ######################################
         df_times = []
         diff_times = []
-        if type(self.df["Time"][1]) == str:
+        self.df.loc[1, "Time"]
+        if type(self.df.loc[1, "Time"]) == str:
             for i in range(1,10):
-                ent = dateutil.parser.parse(self.df["Time"][i+1])-dateutil.parser.parse(self.df["Time"][i])
+                ent = dateutil.parser.parse(self.df.loc[i+1, "Time"])-dateutil.parser.parse(self.df.loc[1, "Time"])
                 df_times.append(ent.total_seconds())
             self.average_timestep = numpy.mean(df_times)
         elif type(self.df["Time"][1]) == numpy.float64:
             for i in range(1, 10):
-                df_times.append(self.df["Time"][i+1]-self.df["Time"][i])
+                df_times.append(self.df.loc[i+1, "Time"]-self.df.loc[1, "Time"])
             self.average_timestep = numpy.mean(df_times)
         elif type(self.df["Time"][1]) == pandas._libs.tslibs.timestamps.Timestamp:
             for i in range(1, 10):
-                df_times.append((self.df["Time"][i+1]-self.df["Time"][i]).total_seconds())
+                df_times.append((self.df.loc[i+1, "Time"]-self.df.loc[1, "Time"]).total_seconds())
             self.average_timestep = numpy.mean(df_times)
 
+
     def make_some_graphs(self):
-        self.load_data()
-        self.__read_data()
+        self.load_persistence_data()
+        self.load_experimental_data()
         for thermistor in self.keeper_data:
             for temperature in self.keeper_data[thermistor]:
                 for cut, row in self.keeper_data[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, avg_bars=True, keywords=["waves", "mm", "microwaves", "vna"])
 
+
     def return_df(self):
-        self.__read_data()
+        self.load_experimental_data()
         return self.df
+
 
     def omniview_gui(self, user_start, user_end, thermistors, comments=False, save_fig=False, dpi_val=150):
         #       
@@ -430,7 +499,7 @@ class slifercal(object):
         try:
             self.df
         except AttributeError:
-            self.__read_data()
+            self.load_experimental_data()
 
         to_drop = []
         for thermistor in self.df:
@@ -518,6 +587,7 @@ class slifercal(object):
         plt.clf()
         gc.collect()
 
+
     def omniview_in_terminal(self,thermistors=[]):
 
         #       DEPRICATED, but still useful if devloping.
@@ -526,7 +596,7 @@ class slifercal(object):
         try:
             self.df
         except AttributeError:
-            self.__read_data()
+            self.load_experimental_data()
         if len(thermistors) == 0:
             thermistors = self.df.columns.to_list()
         to_drop = []
@@ -591,14 +661,16 @@ class slifercal(object):
                 print('Bad input')
                 return False
 
+
     def plot_top_n_ranges(self, n=10, comments=True):
-        self.__find_top_n_ranges(n=n)
+        self.find_top_n_ranges(n=n)
         for thermistor in self.n_best:
             for temperature in self.n_best[thermistor]:
                 for cut, row in self.n_best[thermistor][temperature].iterrows():
                     self.plotting_module(
                                         thermistor, temperature, cut, row,
                                         avg_bars=True)     
+
     
     def __plot_keyword_hits(self, keywords, thermistors=None, persistance=True, kelvin=False):
         try:
@@ -621,10 +693,11 @@ class slifercal(object):
             for temperature in self.keyword_hits[thermistor]:
                 for cut, row in self.keyword_hits[thermistor][temperature].iterrows():
                     self.plotting_module(thermistor, temperature, cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin)
+
             
     def plotting_module(self, thermistor, temperature, cut, kernel, avg_bars=None, keywords=[], dpi_val=150, wing_width=1000, kelvin=False, extra=''):
         #################################################################################
-        """cut
+        """
            This takes some basic information in the form of its arguments, and with a 
            kernel in the form of:
                         [Average, Standard Deviation, Range Start, Range End] 
@@ -797,6 +870,7 @@ class slifercal(object):
             gc.collect() # You will run out of memory if you do not do this.
             return True
 
+
     def __commenter(self, canvas, graph, logbook_slice, df_xslice, rng_ss=0, keywords=[], rng_ee=0, avg=0, dpi_val=300):
         # THERE IS CURRENTLY A BUG WHERE IF COMMENTS ARE SET TO TRUE, IN THE GUI DATE-GRAPHER THIS THING WILL DROP TIMESTAMPS
         # ON THE COMMENTS OF THE FIGURES. I HAVE YET TO FIND OUT WHAT IS CAUSING THAT, BUT FOR NOW THE PROGRAM WORKS. 
@@ -900,6 +974,7 @@ class slifercal(object):
 
         return canvas, graph
 
+
     def convert_df_yslice(self, thermistor, data):
         thermistors_in_file = ["CCS.F1","CCS.F2","CCS.F3","CCS.F4","AB.F5", "AB.F6", "CCS.F7", "CCS.F8","CCS.F9","CCS.F10", "CCS.F11", "CCS.S1", "CCS.S2", "CCS.S3"]
         if thermistor in thermistors_in_file:
@@ -908,6 +983,7 @@ class slifercal(object):
         else:
             data2 = data.apply(convert_to_k_spect, args=(), thermistor=thermistor)
         return data2
+
 
     def graph_comment_formater(self, comment):
         # MAX COLUMN LENGTH 55
@@ -922,11 +998,12 @@ class slifercal(object):
                 n += 1
         str_to_return = "".join(ls)
         return str_to_return, n
+
                 
     def return_dfs(self):
-        self.load_data()
-        self.__read_data()
-        self.__cleandf()
+        self.load_persistence_data()
+        self.load_experimental_data()
+        self.clean_experimental_data()
         thermistors = {}
         for name in self.df.columns.values:
             if name != "Time":
@@ -935,14 +1012,17 @@ class slifercal(object):
             if key != "Time":
                 thermistors[key].calibrate_curve()
 
+
     def load_coefficents(self):
         with open("curve_coefficent_data.csv", 'r') as f:
             self.coefficents_df = pandas.read_csv(f, index_col='Name')
 
-    def __load_data_record(self):
+
+    def __load_persistence_data_record(self):
         with open(self.data_record_location, 'r') as f:
             self.data_record = pandas.read_csv(f, delimiter='\t')
         self.data_record["Time"] = pandas.to_datetime(self.data_record["Time"])
+
     
     def nearest_spike(self, test_val, iterable, updown, tag):
         # Based on the __nearest() method, this does that, 
@@ -952,11 +1032,12 @@ class slifercal(object):
         df_index = self.df.index[self.df["Time"] == nearest_time][0]
         return [tag, nearest_time, df_index, updown]
 
+
     def plot_magnet_spikes(self, thermistors=None, keywords=[], kelvin=False):
         self.magnet_spikes = {}
-        self.__load_data_record()
-        self.__read_data()
-        self.__cleandf()
+        self.__load_persistence_data_record()
+        self.load_experimental_data()
+        self.clean_experimental_data()
         prv_state = 0
         self.mag_spike_indexes = []
         for index, row in self.data_record.iterrows():
@@ -988,6 +1069,7 @@ class slifercal(object):
         for thermistor in self.magnet_spikes:
             for cut, row in self.magnet_spikes[thermistor]["MAGNET_SPIKE"].iterrows():
                 self.plotting_module(thermistor, "MAGNET_SPIKE", cut, row, keywords=keywords, wing_width=1000, avg_bars=True, kelvin=kelvin, extra=self.magnet_spikes[thermistor]["MAGNET_SPIKE"].loc[cut,"UPDOWN"])
+                
         
 def convert_to_k(r,a,b,c):
     #
