@@ -10,7 +10,7 @@ import gc
 # Matplotlib is the slowest thing in here.
 plt.style.use('fast')
 
-class slifercal(object):
+class sliferCal(object):
     def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv'):
         self.data_record_location=data_record_location        
         register_matplotlib_converters() # Calling the calibrate method without this here told me to put this here.
@@ -186,6 +186,7 @@ class slifercal(object):
         # Based on the __nearest() method, 
         # but returns the critical range information for our kernels.
         print("Looking for the nearest date to", test_val, "from logbook index", tag, "in raw-data file")
+        print(type(iterable))
         nearest_time = min(iterable, key=lambda x: abs(x - test_val))
         df_index = self.df.index[self.df["Time"] == nearest_time][0]
         return [tag, nearest_time, df_index]
@@ -431,7 +432,7 @@ class slifercal(object):
             self.keyword_hits[thermistor] = {"KEYWORD":pandas.DataFrame.from_dict(kernel_dicts, orient='index', columns=["STD", "AVG", "RANGE START", "RANGE END"])}
 
 
-    def __time_since_1904(self,sec): 
+    def time_since_1904(self,sec): 
         # LabVIEW conveniently used seconds from "1 January, 1904" as time-stamp.
         self.begining_of_time = datetime.datetime(1903, 12, 31)+datetime.timedelta(seconds=72000) # Ellie noted a -4 hour time difference from UTC.
         return self.begining_of_time + datetime.timedelta(seconds=sec) # Assume accuracy no finer than a minute.
@@ -449,7 +450,7 @@ class slifercal(object):
         ######################################
         df_times = []
         diff_times = []
-        self.df.loc[1, "Time"]
+        #self.df.loc[1, "Time"]
         if type(self.df.loc[1, "Time"]) == str:
             for i in range(1,10):
                 ent = dateutil.parser.parse(self.df.loc[i+1, "Time"])-dateutil.parser.parse(self.df.loc[1, "Time"])
