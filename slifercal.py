@@ -42,7 +42,10 @@ class sliferCal(object):
         print("Initalization succesful.")
     
     def get_columns(self):
-        return self.df.columns.tolist()
+        trash = self.df.columns.tolist()
+        while ("" in  trash):
+            trash.remove("")
+        return trash
 
     def get_thermometry_data(self):
         ################################################
@@ -177,7 +180,7 @@ class sliferCal(object):
 
 
     def logbook_status(self):
-        #print(len(self.logbook_df))
+        #Check for empty file
         if len(self.logbook_df) == 0:
             return False
         return True
@@ -333,6 +336,8 @@ class sliferCal(object):
             # If david did not convert time from 1904/12/31 20:00:00, 
             # then do the conversion and put it into datetime.
             self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
+        else:
+            self.df["Time"] = pandas.to_datetime(self.df["Time"])
 
 
     def load_experimental_data(self, delimeter='\n', new=True):
@@ -375,7 +380,7 @@ class sliferCal(object):
             if column not in ["Time", "Comment"]:
                 self.thermistor_names.append(column)
 
-        """# Do the logbook timestamps coinside with the raw data's timestamps?
+        # Do the logbook timestamps coinside with the raw data's timestamps?
         try:
             lb_time = self.logbook_df["Time"]
             lb_min = min(lb_time)
@@ -399,12 +404,11 @@ class sliferCal(object):
         # https://stackoverflow.com/questions/9044084/efficient-date-range-overlap-calculation-in-python
         latest_start = max(lbrange.start, df_range.start)
         earliest_end = min(lbrange.end, df_range.end)
-        delta = (earliest_end - latest_start).seconds()
-        overlap = max(0, delta)
+        delta = earliest_end - latest_start
 
-        if overlap >= 1:
-            print("Logbook belongs with dataset, with a total overlap time of", overlap, "seconds.")
-                                    """
+        if delta >= datetime.timedelta(seconds=5):
+            print("Logbook belongs with dataset, with a total overlap time of",delta)
+                                    
 
 
 

@@ -115,7 +115,7 @@ class File_Selector(tk.Frame):
     def spawn_utilities(self):
         self.omniview_button_frame = tk.LabelFrame(self.options, text="Date-Based Data Viewer")
         self.omniview_button_frame.grid(column=1)
-        self.omniview_button = tk.Button(self.omniview_button_frame, text="Omni-View", command=self.omni_continue)
+        self.omniview_button = tk.Button(self.omniview_button_frame, text="Omni-View", command= lambda: self.controller.show_frame(cont=Omni_View, instance=self.instance))
         self.omniview_button.grid(column=1)
 
         self.keyword_button_frame = tk.LabelFrame(self.options, text='Keyword Data Viewer')
@@ -125,13 +125,8 @@ class File_Selector(tk.Frame):
 
         self.calibrate_button_frame = tk.LabelFrame(self.options, text="Stable Region Finder")
         self.calibrate_button_frame.grid(column=1)
-        self.calibrate_button = tk.Button(self.calibrate_button_frame, text="Thermometry Calibration")
+        self.calibrate_button = tk.Button(self.calibrate_button_frame, text="Thermometry Stable Region Finder")
         self.calibrate_button.grid(column=1)
-
-
-    def omni_continue(self):
-        self.controller.show_frame(cont=Omni_View, instance=self.instance)
-
 
 
 
@@ -139,8 +134,7 @@ class File_Selector(tk.Frame):
 
 class Omni_View(File_Selector):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self,parent)
-        
+        tk.Frame.__init__(self, parent)
         self.controller = controller
 
     def fetch_instance(self, instance):
@@ -154,15 +148,15 @@ class Omni_View(File_Selector):
         self.title = tk.Label(self, text="Omni-View")
         self.title.grid(column=2, row=1)
 
-        #self.channel_frame = tk.Frame(self, text="Y-axis Selection")
-        #self.channel_frame.grid(column=1, row =1)
+        self.channel_frame = tk.LabelFrame(self, text="Y-axis Selection")
+        self.channel_frame.grid(column=1, row =1)
         print(self.instance.get_columns())
 
         self.generate_channels()
 
     def generate_channels(self):
-        cols = elf.instance.get_columns()
-        self.channel_frame = tk.Frame(self, text="Y-Axis")
+        cols = self.instance.get_columns()
+        self.channel_frame = tk.LabelFrame(self, text="Y-Axis")
 
 
 
