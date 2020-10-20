@@ -10,6 +10,9 @@ from matplotlib import pyplot as plt
 import gc
 
 
+global fig_x_dim, fig_y_dim, dpi
+fig_x_dim, fig_y_dim, dpi = 8,4.5, 300
+
 
 class sliferCal(object):
     def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv', gui=False):
@@ -345,6 +348,12 @@ class sliferCal(object):
             self.df["Time"] = pandas.to_datetime(self.df["Time"])
 
 
+    def gettimerange(self):
+        times = self.df["Time"]
+        maxtime, mintime = max(times), min(times)
+        return maxtime,mintime
+
+
     def load_experimental_data(self, delimeter='\n', new=True):
         # Reads in the raw data, and tries to find comments that go with it.
         self.thermistor_names = []
@@ -570,12 +579,10 @@ class sliferCal(object):
         return self.df
 
 
-    def omniview_gui(self, user_start, user_end, thermistors, comments=False, save_fig=False, dpi_val=150):
+    def omniview_gui(self, user_start, user_end, thermistors, xaxis, comments=False, save_fig=False, dpi_val=150):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #       
-        fig_x_dim = 32
-        fig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim
         fig_y_basic_info = (8.1/9)*fig_y_dim
         fig_x_end_range_data = (13/16)*fig_x_dim
@@ -634,7 +641,9 @@ class sliferCal(object):
             else:
                 df_yslice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
             ycut = df_yslice.drop("Time", axis=1, inplace=True)
-            df_xslice = self.df.loc[df_yslice.index.tolist(),"Time"]
+
+
+            df_xslice = self.df.loc[df_yslice.index.tolist(),"Time"]#,xaxis] # GENERALIZE it.
             
             k = len(df_xslice)
             
@@ -803,8 +812,8 @@ class sliferCal(object):
                 - avg_bars = None, keywords=[List of keywords], comments = True
                                                                                       """
         #################################################################################
-        fig_x_dim = 32
-        fig_y_dim = 18
+        #fig_x_dim = 8
+        #fig_y_dim = 4.5
         fig_x_basic_info = (0.25/16)*fig_x_dim
         fig_y_basic_info = (8.1/9)*fig_y_dim
         fig_x_end_range_data = (13/16)*fig_x_dim
@@ -967,8 +976,8 @@ class sliferCal(object):
         # THERE IS CURRENTLY A BUG WHERE IF COMMENTS ARE SET TO TRUE, IN THE GUI DATE-GRAPHER THIS THING WILL DROP TIMESTAMPS
         # ON THE COMMENTS OF THE FIGURES. I HAVE YET TO FIND OUT WHAT IS CAUSING THAT, BUT FOR NOW THE PROGRAM WORKS. 
         #
-        fig_x_dim = 32
-        fig_y_dim = 18
+        #fig_x_dim = 32
+        #fig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim
         fig_y_basic_info = (8.1/9)*fig_y_dim
         fig_x_end_range_data = (13/16)*fig_x_dim

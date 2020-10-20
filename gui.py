@@ -1,7 +1,7 @@
 """
 Tristan Anderson
 tja1015@wildats.unh.edu
-tris31299@gmail.com
+
 
 Proceed Formally.
 """
@@ -71,19 +71,16 @@ class File_Selector(tk.Frame):
         self.options = tk.LabelFrame(self, text="Utilities")
         self.options.grid(row=3, column=1)
 
-
     def fetch_instance(self, instance):
         self.instance = instance
         self.populate_toggleables()
         self.spawn_utilities()
-
 
     def populate_toggleables(self):
         self.get_data_frame = tk.LabelFrame(self.fileframe, text="Raw Data")
         self.get_data_frame.grid(row=1, column=1)
         self.get_data_button = tk.Button(self.get_data_frame, text="Select DAQ File", command=self.datafileDialog)
         self.get_data_button.grid(row=1, column=1)
-
 
     def datafileDialog(self):
         ftyps = (("DAQ File", "*.csv"),("all files","*.*"))
@@ -101,7 +98,6 @@ class File_Selector(tk.Frame):
         else:
             print("**ERROR: Data file was not loaded into slifercal.")
 
-
     def logbookfileDialog(self):
         ftyps = (("DAQ File", "*.csv"),("all files","*.*"))
         self.logbookfilename = filedialog.askopenfilename(initialdir =  "$HOME", title = "Select A File", filetypes = ftyps)
@@ -111,8 +107,8 @@ class File_Selector(tk.Frame):
         if self.instance.load_logbook(newpath=self.logbookfilename, gui=True):
             print("Logbook updated by user.")
         else:
-            print("**Warning: Logbook update failed.")
-    
+            print("**Warning: Logbook update failed.")  
+
     def spawn_utilities(self):
         self.omniview_button_frame = tk.LabelFrame(self.options, text="Date-Based Data Viewer")
         self.omniview_button_frame.grid(column=1)
@@ -128,6 +124,7 @@ class File_Selector(tk.Frame):
         self.calibrate_button_frame.grid(column=1)
         self.calibrate_button = tk.Button(self.calibrate_button_frame, text="Thermometry Stable Region Finder")
         self.calibrate_button.grid(column=1)
+
 
 class Omni_View(File_Selector):
     def __init__(self, parent, controller):
@@ -145,11 +142,13 @@ class Omni_View(File_Selector):
 
         self.x_frame = tk.LabelFrame(self.toggleables_frame, text="X-Axis Selector")
         self.x_frame.grid(column=1, row=2)
+
+        self.timeframe = tk.LabelFrame(self.toggleables_frame, text="Select Timewindow to Graph")
+        self.timeframe.grid(column=1,row=3)
         
     def fetch_instance(self, instance):
         self.instance = instance
         self.populate_toggleables()
-
 
     def populate_toggleables(self):
         self.generate_ychannels()
@@ -158,6 +157,100 @@ class Omni_View(File_Selector):
         self.generate_xpulldown()
 
         self.generate_timeselection()
+
+
+    def get_timespans(self, maxtime,mintime):
+        y = []
+        m = []
+        d =[]
+        h = []
+        M = []
+        S = []
+
+        timedelta = maxtime-mintime
+        try:
+            for i in range(0,timedelta.years+1):
+                step = (mintime+datetime.timedelta(years=i)).year
+                if step not in y:
+                    y.append(step)
+        except:
+            y = [x for x in range(mintime.year, maxtime.year+1)]
+
+
+        try:
+            for i in range(0,timedelta.months+1):
+                step = (mintime+datetime.timedelta(months=i)).month
+                if step not in m:
+                    m.append(step)
+        except:
+            m = [x for x in range(mintime.month, maxtime.month+1)]
+
+
+        try:
+            for i in range(0,timedelta.days+1):
+                step = (mintime+datetime.timedelta(days=i)).day
+                if step not in d:
+                    d.append(step)
+        except:
+            d = [x for x in range(mintime.day, maxtime.day+1)]
+
+        try:
+            for i in range(0,timedelta.hours+1):
+                step = (mintime+datetime.timedelta(hours=i)).hour
+                if step not in h:
+                    h.append(step)
+        except:
+            h = [x for x in range(0, 24)]
+
+
+        try:
+            for i in range(0,timedelta.minutes+1):
+                step = (mintime+datetime.timedelta(minutes=i)).minute
+                if step not in M:
+                    M.append(step)
+        except:
+            M = [x for x in range(0,60)]
+
+
+        try:
+            for i in range(0,timedelta.seconds+1):
+                step = (mintime+datetime.timedelta(seconds=i)).second
+                if step not in s:
+                    s.append(step)
+        except:
+            s = [x*15 for x in range(0,5)]
+
+
+        return y,m,d,h,M,s
+
+    def generate_timeselection(self):
+        maxtime,mintime = self.instance.gettimerange()
+
+        y,m,d,h,M,s = self.get_timespans(maxtime,mintime)
+
+        self.minyear,self.minmonth,self.minday,
+        self.minhour,self.minminute,
+        self.minsecond = tk.StringVar(value=min(y)), tk.StringVar(value=min(m)), 
+            tk.StringVar(value=min(d)), tk.StringVar(value=min(h)), tk.StringVar(value=min(M)), 
+                tk.StringVar(value=min(s))
+
+        self.maxyear,self.maxmonth,self.maxday,
+        self.maxhour,self.maxminute,
+        self.maxsecond = tk.StringVar(value=max(y)), tk.StringVar(value=max(m)), 
+            tk.StringVar(value=max(d)), tk.StringVar(value=max(h)), tk.StringVar(value=max(M)), 
+                tk.StringVar(value=max(s))
+        
+        ###   Creating Timerange
+        
+
+        self.minlabelframe = tk.LabelFrame(self.timeframe,text="Approximate Start Date")
+        self.minlabelframe.grid(column=1, row=1)
+        
+        
+
+
+        self.maxlabelframe = tk.LabelFrame(self.timeframe, text="Approximate End Date")
+        self.maxlabelframe.grid(column=1, row=1)
 
     def generate_xpulldown(self):
         self.xaxisvalue = tk.StringVar(value="Time")
@@ -201,7 +294,6 @@ class Omni_View(File_Selector):
         self.ylabelentry = tk.Entry(self.ylabelsubframe, textvariable=self.ylabel)
         self.tk_YLabel.grid(column=1,row=1)
         self.ylabelentry.grid(column=2, row=1)
-
 
 
 class Key_Word(File_Selector):
