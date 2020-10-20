@@ -410,7 +410,7 @@ class sliferCal(object):
                 if step not in s:
                     s.append(step)
         except:
-            s = [x*15 for x in range(0,5)]
+            s = [x*15 for x in range(0,4)]
 
 
         return y,m,d,h,M,s

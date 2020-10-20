@@ -145,10 +145,36 @@ class Omni_View(File_Selector):
 
         self.timeframe = tk.LabelFrame(self.toggleables_frame, text="Select Time Window to Graph")
         self.timeframe.grid(column=1,row=3)
+
+        self.finalframe = tk.LabelFrame(self.toggleables_frame, text="Finalize")
+        self.finalframe.grid(column=1,row=4)
         
     def fetch_instance(self, instance):
         self.instance = instance
         self.populate_toggleables()
+
+    def execute(self):
+        year=int(self.minyear.get())
+        month=int(self.minmonth.get())
+        day=int(self.minday.get())
+        hour=int(self.minhour.get())
+        minute=int(self.minminute.get())
+        second=int(self.minsecond.get())
+        
+        u_start= datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
+
+        year=int(self.maxyear.get())
+        month=int(self.maxmonth.get())
+        day=int(self.maxday.get())
+        hour=int(self.maxhour.get())
+        minute=int(self.maxminute.get())
+        second=int(self.maxsecond.get())
+
+        u_end = datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
+
+        thermistors = self.get_selected_thermistors()
+        xaxis = self.xaxisvalue.get()
+        comments = True if self.comments.get()=='1' else False
 
     def populate_toggleables(self):
         self.generate_ychannels()
@@ -158,8 +184,22 @@ class Omni_View(File_Selector):
 
         self.generate_timeselection()
 
+        
+        self.startbutton = tk.Button(self.finalframe, text="Start", command=self.execute)
+        self.startbutton.grid(column=1,row=1)
 
+        self.comments = tk.StringVar(value='1')
+        self.commentsbox = tk.Checkbutton(self.finalframe, text="Comments", variable=self.comments, onvalue='1', offvalue='0')
+        self.commentsbox.grid(column=2,row=1)
 
+        self.backbutton = tk.Button(self, text="Back", command=lambda: self.controller.show_frame(cont=File_Selector))
+        self.backbutton.grid(column=1, row=3)
+
+    def get_selected_thermistors(self):
+        print("\n"*4)
+        for key in self.checkbuttons:
+            if self.checkbuttons[key].get() == '1':
+                print(key)
 
 
     def generate_timeselection(self):
@@ -176,6 +216,9 @@ class Omni_View(File_Selector):
         self.maxsecond = tk.StringVar(value=max(y)), tk.StringVar(value=max(m)),\
             tk.StringVar(value=max(d)), tk.StringVar(value=max(h)), tk.StringVar(value=max(M)),\
             tk.StringVar(value=max(s))
+
+        
+        
         
         ###   Creating Timerange
         
@@ -270,7 +313,7 @@ class Omni_View(File_Selector):
         self.yaxisselection_subframe = tk.Frame(self.ychannel_frame)
         self.yaxisselection_subframe.grid(column=1,row=1)
         plottable_keywords = ["(Ohms)", "Magnet", "waves", "(K)", "level", "Torr", "Time"]
-        self.buttons, self.checkbutton = {},{}
+        self.buttons, self.checkbuttons = {},{}
         ycols = self.instance.get_columns()
         ycols_sorted = sorted(ycols, key=lambda word: (".R" not in word, word))
         
@@ -280,8 +323,8 @@ class Omni_View(File_Selector):
                 self.plottable_ys.append(value)
         
         for index,v in enumerate(self.plottable_ys):
-            self.checkbutton[value] = tk.StringVar(value=0)
-            self.buttons[v] = tk.Checkbutton(self.yaxisselection_subframe, text=v, variable=self.checkbutton[value], onvalue='1',offvalue='0')
+            self.checkbuttons[v] = tk.StringVar(value='0')
+            self.buttons[v] = tk.Checkbutton(self.yaxisselection_subframe, text=v, variable=self.checkbuttons[v], onvalue='1',offvalue='0')
             self.buttons[v].grid(column=index%3, row=int(index/3))
         #self.button_array =
         #for index,value in enumerate(ycols_sorted):
