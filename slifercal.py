@@ -2,16 +2,30 @@ import time, pandas, numpy, copy, datetime, os, traceback, dateutil.parser, mult
 from multiprocessing import Pool
 from pandas.plotting import register_matplotlib_converters
 from thermistor_profile import thermistor_profile as tp
+from collections import namedtuple
+timeRangeOverlap = namedtuple("timeRangeOverlap", ["start", "end"])
 import _pickle as pickle
 import matplotlib
 from matplotlib import pyplot as plt
 import gc
 
-# Matplotlib is the slowest thing in here.
-plt.style.use('fast')
+
 
 class sliferCal(object):
-    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv'):
+    def __init__(self, processes=0, datafile_location=None, logbook_datafile_location=None, data_record_location='data_record.csv', gui=False):
+        """
+            Upon initalization we aquire the following:
+                - Number of processing threads (Used for analysis)
+                - The variable name in which the instance is stored from the traceback
+            We recieve from calling, or default to the following:
+                - Datafile location: default data.csv, is required for you to do anything with
+                    this program, so it will terminate if you haven't given it a good one.
+                - Logbook location: default None, but will search for 'logbook.csv'
+                    not required for 
+
+        """
+        print("Slifer Cal initalizing...")
+        plt.style.use('fast')
         self.data_record_location=data_record_location        
         register_matplotlib_converters() # Calling the calibrate method without this here told me to put this here.
         self.trslat = {0: "RT", 1: "LN2", 2: "LHe"}
@@ -25,13 +39,17 @@ class sliferCal(object):
             print(self.processes, "Processing threads available")
         else:
             self.processes = processes
+        print("Initalization succesful.")
+    
+    def get_columns(self):
+        return self.df.columns.tolist()
 
-
-    def clean_experimental_data(self):
+    def get_thermometry_data(self):
         ################################################
         """
-           Basic data cleaning geared for thermometry
-                         lab data
+            Takes the dataframe and drops all columns
+            except the timestamp, and resistance
+                        thermometry data
                                                      """
         ################################################
         indexes_that_are_to_be_deleted = []
@@ -49,19 +67,27 @@ class sliferCal(object):
                 self.df[index] = self.df[index].astype(float)   
 
         self.df["Time"] = pandas.to_datetime(self.df["Time"])
-        #print(self.df)
 
-        print("Experimental data is clean.")
+        print("Data has been reduced to thermometry data.")
 
 
-    def complete_keyword(self, timeit, keywords, rangeshift=1, range_length=None):
+    def complete_keyword(self, timeit, keywords, thermistors, rangeshift=1, range_length=None):
+        """
+            Ready-to-go prebuilt method.
+
+                - Grabs experimental data and cleans it.
+                - Grabs logbook.
+                - Grabs the list of keywords, and finds keyword hits.
+                - Plots the data for the keyword hits for each thermistor.
+                - Prints time for execution in seconds.
+        """
         if timeit:
             readings = time.time()
         self.load_experimental_data()
         if timeit:
             readingf=time.time()
             cleans = time.time()
-        self.clean_experimental_data()
+        self.get_thermometry_data()
         if timeit:
             cleanf=time.time()
             analysiss = time.time()
@@ -69,7 +95,7 @@ class sliferCal(object):
         if timeit:
             analysisf = time.time()
             plottings = time.time()
-        self.plot_keyword_hits(keywords, thermistors=None)
+        self.plot_keyword_hits(keywords, thermistors)
         if timeit:
             plottingf=time.time()
         print("Reading", readingf-readings, "Analysis", analysisf-cleans, "Plotting", plottingf-plottings)
@@ -96,21 +122,15 @@ class sliferCal(object):
                                                    """
         ##############################################
         self.load_experimental_data()
-        self.clean_experimental_data()
+        self.get_thermometry_data()
         self.range_election(rangeshift=rangeshift)
-        # Hi
     
 
     def load_persistence_data(self, file_location=None):
         ###################################################
         """
-           This can be used in many modes, but it really
-           was made with the intent of persistance. The
-             user would load their pickled keeper_data 
-             in a live version of python3 and call the
-           plot_calibration_candidates method to make a
-           bunch of graphs based on the data loaded into
-                   the instance from this method.
+            Unpickeler for data saved with intent of 
+                            persistence.
                                                         """
         ###################################################
         # Loads persistence data
@@ -156,7 +176,16 @@ class sliferCal(object):
             print("File read")
 
 
-    def __load_logbook(self):
+    def logbook_status(self):
+        #print(len(self.logbook_df))
+        if len(self.logbook_df) == 0:
+            return False
+        return True
+
+
+    def load_logbook(self, newpath=None, gui=False):
+        if newpath is not None:
+            self.logbook_datafile_location = newpath
         if self.logbook_datafile_location == None:
             print("No loogbook path was used to initalize the instance!\nAssuming logbook is \"logbook_data.csv\" \nSearching local directory:")
             self.logbook_datafile_location = "logbook.csv"
@@ -165,9 +194,13 @@ class sliferCal(object):
                 self.logbook_df = pandas.read_csv(f, sep='\t')
             self.logbook_df["Time"] = pandas.to_datetime(self.logbook_df["Time"]) 
             print("File found. Comments File loaded.")
+            if gui:
+                return True
         except:
-            print("**WARNING: Logbook was not found.")
+            print("**WARNING: Logbook was not found. Empty DF created.")
             self.logbook_df = pandas.DataFrame(columns=["Time", "Comment"])
+            if gui:
+                return False
 
 
     def __nearest(self, test_val, iterable): 
@@ -178,7 +211,7 @@ class sliferCal(object):
 
     def keyword(self, keywords, thermistors=None, persistance=True, kelvin=False):
         self.load_experimental_data()
-        self.clean_experimental_data()
+        self.get_thermometry_data()
         self.__plot_keyword_hits(keywords, thermistors=thermistors, persistance=persistance, kelvin=kelvin)
 
 
@@ -201,6 +234,9 @@ class sliferCal(object):
            and assigns it a "Temperature range" based on ballpark
                        estimates found in the function:
                       what_temperature_range_are_we_in()
+
+              IF THERMOMETRY GROUPINGS ARE NO LONGER ACCURATE
+                      EDIT THE FUNCTION STATED ABOVE.
                                                                   """
         #############################################################
         if range_length == None:
@@ -278,20 +314,29 @@ class sliferCal(object):
             return keeper_data
 
 
-    def import_datafile(self, datafile_location='', delimeter='\t'):
-        # Read Data
+    def update_datafile(self, datafile_location='', delimeter='\t', gui=False):
+        # Read the data into the instance. 
+        # This will be useful for the gui.
         self.datafile_location = datafile_location
         self.load_experimental_data(delimeter=delimeter)
-        self.clean_experimental_data()
+        if gui:
+            try:
+                self.df
+            except AttributeError:
+                return False
+            return True
+        #self.get_thermometry_data()
 
 
     def __ensuretime(self):
-        if type(self.df.loc[1, "Time"]) == numpy.float64: # If david did not convert time from 1904/12/31 20:00:00, then do the conversion and put it into datetime.
+        if type(self.df.loc[1, "Time"]) == numpy.float64: 
+            # If david did not convert time from 1904/12/31 20:00:00, 
+            # then do the conversion and put it into datetime.
             self.df["Time"] = self.df["Time"].apply(self.__time_since_1904)
 
 
     def load_experimental_data(self, delimeter='\n', new=True):
-        # Reads in the raw data, and find comments that goes with it.
+        # Reads in the raw data, and tries to find comments that go with it.
         self.thermistor_names = []
         if self.datafile_location == None:
             print(
@@ -325,10 +370,42 @@ class sliferCal(object):
                 self.df["Comment"]
             except KeyError as c:
                 print("No comments were provided in the datafile. Searching elsewhere...")
-                self.__load_logbook()
+                self.load_logbook()
         for column in self.df:
             if column not in ["Time", "Comment"]:
                 self.thermistor_names.append(column)
+
+        """# Do the logbook timestamps coinside with the raw data's timestamps?
+        try:
+            lb_time = self.logbook_df["Time"]
+            lb_min = min(lb_time)
+            lb_max =  max(lb_time)
+            lbrange = timeRangeOverlap(start=lb_min, end=lb_max)
+        except KeyError as e:
+            print(e)
+            print("**Advisory: Unable to determine if the logbook belongs to the raw datatset.")
+            return False
+
+        try:
+            df_time = self.df["Time"]
+            df_min = min(df_time)
+            df_max = max(df_time)
+            df_range = lbrange = timeRangeOverlap(start=df_min, end=df_max)
+        except KeyError as e:
+            print(e)
+            print("**Advisory: Unable to determine if the logbook belongs to the raw datatset.")
+            return False
+
+        # https://stackoverflow.com/questions/9044084/efficient-date-range-overlap-calculation-in-python
+        latest_start = max(lbrange.start, df_range.start)
+        earliest_end = min(lbrange.end, df_range.end)
+        delta = (earliest_end - latest_start).seconds()
+        overlap = max(0, delta)
+
+        if overlap >= 1:
+            print("Logbook belongs with dataset, with a total overlap time of", overlap, "seconds.")
+                                    """
+
 
 
     def find_top_n_ranges(self, n=10):
@@ -1005,7 +1082,7 @@ class sliferCal(object):
     def return_dfs(self):
         self.load_persistence_data()
         self.load_experimental_data()
-        self.clean_experimental_data()
+        self.get_thermometry_data()
         thermistors = {}
         for name in self.df.columns.values:
             if name != "Time":
@@ -1039,7 +1116,7 @@ class sliferCal(object):
         self.magnet_spikes = {}
         self.__load_persistence_data_record()
         self.load_experimental_data()
-        self.clean_experimental_data()
+        self.get_thermometry_data()
         prv_state = 0
         self.mag_spike_indexes = []
         for index, row in self.data_record.iterrows():

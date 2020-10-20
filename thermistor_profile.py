@@ -8,8 +8,12 @@ USE CAUTION WITH AB.F6. THE PREVIOUS THERMISTOR BROKE SO
 THE CURRENT CALIBRATION IS NOT VALID. AB.F6 IS R6.
 """
 
-def function(r,a,b,c):
+def function2(r,a,b,c):
     return a+b*numpy.exp(c*(1000/r))
+
+def function(r,a,b,c):
+    #Stein-Hart equation
+    return 1/a+1/(b*numpy.log(r))+1/(c*numpy.log(r)**3)
 
 class thermistor_profile(object):
     ###############################################################
