@@ -77,6 +77,7 @@ class File_Selector(tk.Frame):
         self.populate_toggleables()
         self.spawn_utilities()
 
+
     def populate_toggleables(self):
         self.get_data_frame = tk.LabelFrame(self.fileframe, text="Raw Data")
         self.get_data_frame.grid(row=1, column=1)
@@ -128,36 +129,78 @@ class File_Selector(tk.Frame):
         self.calibrate_button = tk.Button(self.calibrate_button_frame, text="Thermometry Stable Region Finder")
         self.calibrate_button.grid(column=1)
 
-
-
-
-
 class Omni_View(File_Selector):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent)
         self.controller = controller
 
+        self.title = tk.Label(self, text="Omni-View")
+        self.title.grid(column=1, row=1)
+
+        self.toggleables_frame = tk.LabelFrame(self, text="Options")
+        self.toggleables_frame.grid(column=1, row=2)
+
+        self.ychannel_frame = tk.LabelFrame(self.toggleables_frame, text="Y-Axis Selection")
+        self.ychannel_frame.grid(column=1, row=1)
+
+        self.x_frame = tk.LabelFrame(self.toggleables_frame, text="X-Axis Selector")
+        self.x_frame.grid(column=1, row=2)
+        
     def fetch_instance(self, instance):
         self.instance = instance
         self.populate_toggleables()
 
 
     def populate_toggleables(self):
-        self.toggleables_frame = tk.LabelFrame(self, text="Options")
-        self.toggleables_frame.grid(column=2, row=1)
-        self.title = tk.Label(self, text="Omni-View")
-        self.title.grid(column=2, row=1)
+        self.generate_ychannels()
+        self.generate_ylabelentry()
 
-        self.channel_frame = tk.LabelFrame(self, text="Y-axis Selection")
-        self.channel_frame.grid(column=1, row =1)
-        print(self.instance.get_columns())
+        self.generate_xpulldown()
 
-        self.generate_channels()
+        self.generate_timeselection()
 
-    def generate_channels(self):
-        cols = self.instance.get_columns()
-        self.channel_frame = tk.LabelFrame(self, text="Y-Axis")
+    def generate_xpulldown(self):
+        self.xaxisvalue = tk.StringVar(value="Time")
+        self.xpulldown = tk.OptionMenu(self.x_frame, self.xaxisvalue, *self.plottable_ys)
+        self.xpulldown.grid(column=1,row=1)
+        
+        self.xentryframe = tk.Frame(self.x_frame)
+        self.xentryframe.grid(column=1, row=2)
+        self.xlabel = tk.StringVar(value="Time")
 
+        self.xaxislabel = tk.Label(self.xentryframe, text="X-Axis Label")
+        self.xlabelentry = tk.Entry(self.xentryframe, textvariable=self.xlabel)
+        self.xaxislabel.grid(column=1, row=1)
+        self.xlabelentry.grid(column=2,row=1)
+
+    def generate_ychannels(self):
+        self.yaxisselection_subframe = tk.Frame(self.ychannel_frame)
+        self.yaxisselection_subframe.grid(column=1,row=1)
+        plottable_keywords = ["(Ohms)", "Magnet", "waves", "(K)", "level", "Torr", "Time"]
+        self.buttons, self.checkbutton = {},{}
+        ycols = self.instance.get_columns()
+        ycols_sorted = sorted(ycols, key=lambda word: (".R" not in word, word))
+        
+        self.plottable_ys = []
+        for index,value in enumerate(ycols_sorted):
+            if any(y in value for y in plottable_keywords):
+                self.plottable_ys.append(value)
+        
+        for index,v in enumerate(self.plottable_ys):
+            self.checkbutton[value] = tk.StringVar(value=0)
+            self.buttons[v] = tk.Checkbutton(self.yaxisselection_subframe, text=v, variable=self.checkbutton[value], onvalue='1',offvalue='0')
+            self.buttons[v].grid(column=index%3, row=int(index/3))
+        #self.button_array =
+        #for index,value in enumerate(ycols_sorted):
+
+    def generate_ylabelentry(self):
+        self.ylabelsubframe = tk.Frame(self.ychannel_frame)
+        self.ylabelsubframe.grid(column=1,row=2)
+        self.ylabel = tk.StringVar(value='Ohms')
+        self.tk_YLabel = tk.Label(self.ylabelsubframe, text="Y-Axis Label")
+        self.ylabelentry = tk.Entry(self.ylabelsubframe, textvariable=self.ylabel)
+        self.tk_YLabel.grid(column=1,row=1)
+        self.ylabelentry.grid(column=2, row=1)
 
 
 

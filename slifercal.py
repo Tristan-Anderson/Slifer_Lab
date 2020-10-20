@@ -181,8 +181,13 @@ class sliferCal(object):
 
     def logbook_status(self):
         #Check for empty file
-        if len(self.logbook_df) == 0:
-            return False
+        try:
+            if len(self.logbook_df) == 0:
+                return False
+        except AttributeError:
+            self.load_logbook()
+            if len(self.logbook_df) == 0:
+                return False
         return True
 
 
@@ -376,10 +381,16 @@ class sliferCal(object):
             except KeyError as c:
                 print("No comments were provided in the datafile. Searching elsewhere...")
                 self.load_logbook()
+        except TypeError as e:
+            self.load_logbook()
         for column in self.df:
             if column not in ["Time", "Comment"]:
                 self.thermistor_names.append(column)
 
+        self.logbook_coinsides()
+
+
+    def logbook_coinsides(self):
         # Do the logbook timestamps coinside with the raw data's timestamps?
         try:
             lb_time = self.logbook_df["Time"]
@@ -409,8 +420,6 @@ class sliferCal(object):
         if delta >= datetime.timedelta(seconds=5):
             print("Logbook belongs with dataset, with a total overlap time of",delta)
                                     
-
-
 
     def find_top_n_ranges(self, n=10):
         ###############################################################
