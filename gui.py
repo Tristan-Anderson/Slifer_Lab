@@ -143,7 +143,7 @@ class Omni_View(File_Selector):
         self.x_frame = tk.LabelFrame(self.toggleables_frame, text="X-Axis Selector")
         self.x_frame.grid(column=1, row=2)
 
-        self.timeframe = tk.LabelFrame(self.toggleables_frame, text="Select Timewindow to Graph")
+        self.timeframe = tk.LabelFrame(self.toggleables_frame, text="Select Time Window to Graph")
         self.timeframe.grid(column=1,row=3)
         
     def fetch_instance(self, instance):
@@ -159,98 +159,98 @@ class Omni_View(File_Selector):
         self.generate_timeselection()
 
 
-    def get_timespans(self, maxtime,mintime):
-        y = []
-        m = []
-        d =[]
-        h = []
-        M = []
-        S = []
-
-        timedelta = maxtime-mintime
-        try:
-            for i in range(0,timedelta.years+1):
-                step = (mintime+datetime.timedelta(years=i)).year
-                if step not in y:
-                    y.append(step)
-        except:
-            y = [x for x in range(mintime.year, maxtime.year+1)]
 
 
-        try:
-            for i in range(0,timedelta.months+1):
-                step = (mintime+datetime.timedelta(months=i)).month
-                if step not in m:
-                    m.append(step)
-        except:
-            m = [x for x in range(mintime.month, maxtime.month+1)]
-
-
-        try:
-            for i in range(0,timedelta.days+1):
-                step = (mintime+datetime.timedelta(days=i)).day
-                if step not in d:
-                    d.append(step)
-        except:
-            d = [x for x in range(mintime.day, maxtime.day+1)]
-
-        try:
-            for i in range(0,timedelta.hours+1):
-                step = (mintime+datetime.timedelta(hours=i)).hour
-                if step not in h:
-                    h.append(step)
-        except:
-            h = [x for x in range(0, 24)]
-
-
-        try:
-            for i in range(0,timedelta.minutes+1):
-                step = (mintime+datetime.timedelta(minutes=i)).minute
-                if step not in M:
-                    M.append(step)
-        except:
-            M = [x for x in range(0,60)]
-
-
-        try:
-            for i in range(0,timedelta.seconds+1):
-                step = (mintime+datetime.timedelta(seconds=i)).second
-                if step not in s:
-                    s.append(step)
-        except:
-            s = [x*15 for x in range(0,5)]
-
-
-        return y,m,d,h,M,s
 
     def generate_timeselection(self):
-        maxtime,mintime = self.instance.gettimerange()
+        y,m,d,h,M,s = self.instance.get_timespans()
 
-        y,m,d,h,M,s = self.get_timespans(maxtime,mintime)
+        self.minyear,self.minmonth,self.minday,\
+        self.minhour,self.minminute,\
+        self.minsecond = tk.StringVar(value=min(y)), tk.StringVar(value=min(m)),\
+            tk.StringVar(value=min(d)), tk.StringVar(value=min(h)), tk.StringVar(value=min(M)),\
+            tk.StringVar(value=min(s))
 
-        self.minyear,self.minmonth,self.minday,
-        self.minhour,self.minminute,
-        self.minsecond = tk.StringVar(value=min(y)), tk.StringVar(value=min(m)), 
-            tk.StringVar(value=min(d)), tk.StringVar(value=min(h)), tk.StringVar(value=min(M)), 
-                tk.StringVar(value=min(s))
-
-        self.maxyear,self.maxmonth,self.maxday,
-        self.maxhour,self.maxminute,
-        self.maxsecond = tk.StringVar(value=max(y)), tk.StringVar(value=max(m)), 
-            tk.StringVar(value=max(d)), tk.StringVar(value=max(h)), tk.StringVar(value=max(M)), 
-                tk.StringVar(value=max(s))
+        self.maxyear,self.maxmonth,self.maxday,\
+        self.maxhour,self.maxminute,\
+        self.maxsecond = tk.StringVar(value=max(y)), tk.StringVar(value=max(m)),\
+            tk.StringVar(value=max(d)), tk.StringVar(value=max(h)), tk.StringVar(value=max(M)),\
+            tk.StringVar(value=max(s))
         
         ###   Creating Timerange
         
 
         self.minlabelframe = tk.LabelFrame(self.timeframe,text="Approximate Start Date")
-        self.minlabelframe.grid(column=1, row=1)
-        
+        self.minlabelframe.grid(column=1, row=1, padx=30)
+
+        self.mindateframe = tk.LabelFrame(self.minlabelframe, text="Date")
+        self.mindateframe.grid(column=1, row=1)
+
+        self.mintimeframe = tk.LabelFrame(self.minlabelframe, text="Time")
+        self.mintimeframe.grid(column=2,row=1)
+
+        self.miny = tk.Label(self.mindateframe, text="Year:")
+        self.miny.grid(column=0, row=1)
+        self.minM = tk.Label(self.mindateframe, text="Month:")
+        self.minM.grid(column=0, row=2)
+        self.mind = tk.Label(self.mindateframe, text="Day:")
+        self.mind.grid(column=0, row=3)
+        self.minyearpulldown = tk.OptionMenu(self.mindateframe, self.minyear, *y)
+        self.minyearpulldown.grid(column=1, row=1)
+        self.minmonthpulldown = tk.OptionMenu(self.mindateframe, self.minmonth, *m)
+        self.minmonthpulldown.grid(column=1, row=2)
+        self.mindaypulldown = tk.OptionMenu(self.mindateframe, self.minday, *d)
+        self.mindaypulldown.grid(column=1,row=3)
+
+        self.minh = tk.Label(self.mintimeframe, text='Hour:')
+        self.minh.grid(column=0, row=1)
+        self.minhourpulldown = tk.OptionMenu(self.mintimeframe, self.minhour, *h)
+        self.minhourpulldown.grid(column=1, row=1)
+        self.minm = tk.Label(self.mintimeframe, text="Minute:")
+        self.minm.grid(column=0, row=2)
+        self.minminutepulldown = tk.OptionMenu(self.mintimeframe, self.minminute, *M)
+        self.minminutepulldown.grid(column=1, row=2)
+        self.mins = tk.Label(self.mintimeframe, text="Second:")
+        self.mins.grid(column=0, row=3)
+        self.minsecondpulldown = tk.OptionMenu(self.mintimeframe, self.minsecond, *s)
+        self.minsecondpulldown.grid(column=1,row=3)
         
 
 
-        self.maxlabelframe = tk.LabelFrame(self.timeframe, text="Approximate End Date")
-        self.maxlabelframe.grid(column=1, row=1)
+        self.maxlabelframe = tk.LabelFrame(self.timeframe,text="Approximate End Date")
+        self.maxlabelframe.grid(column=2, row=1, padx=30)
+
+        self.maxdateframe = tk.LabelFrame(self.maxlabelframe, text="Date")
+        self.maxdateframe.grid(column=1, row=1)
+
+        self.maxtimeframe = tk.LabelFrame(self.maxlabelframe, text="Time")
+        self.maxtimeframe.grid(column=2,row=1)
+
+        self.maxy = tk.Label(self.maxdateframe, text="Year:")
+        self.maxy.grid(column=0, row=1)
+        self.maxM = tk.Label(self.maxdateframe, text="Month:")
+        self.maxM.grid(column=0, row=2)
+        self.maxd = tk.Label(self.maxdateframe, text="Day:")
+        self.maxd.grid(column=0, row=3)
+        self.maxyearpulldown = tk.OptionMenu(self.maxdateframe, self.maxyear, *y)
+        self.maxyearpulldown.grid(column=1, row=1)
+        self.maxmonthpulldown = tk.OptionMenu(self.maxdateframe, self.maxmonth, *m)
+        self.maxmonthpulldown.grid(column=1, row=2)
+        self.maxdaypulldown = tk.OptionMenu(self.maxdateframe, self.maxday, *d)
+        self.maxdaypulldown.grid(column=1,row=3)
+
+        self.maxh = tk.Label(self.maxtimeframe, text='Hour:')
+        self.maxh.grid(column=0, row=1)
+        self.maxhourpulldown = tk.OptionMenu(self.maxtimeframe, self.maxhour, *h)
+        self.maxhourpulldown.grid(column=1, row=1)
+        self.maxm = tk.Label(self.maxtimeframe, text="maxute:")
+        self.maxm.grid(column=0, row=2)
+        self.maxminutepulldown = tk.OptionMenu(self.maxtimeframe, self.maxminute, *M)
+        self.maxminutepulldown.grid(column=1, row=2)
+        self.maxs = tk.Label(self.maxtimeframe, text="Second:")
+        self.maxs.grid(column=0, row=3)
+        self.maxsecondpulldown = tk.OptionMenu(self.maxtimeframe, self.maxsecond, *s)
+        self.maxsecondpulldown.grid(column=1,row=3)
 
     def generate_xpulldown(self):
         self.xaxisvalue = tk.StringVar(value="Time")

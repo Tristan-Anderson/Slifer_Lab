@@ -348,10 +348,72 @@ class sliferCal(object):
             self.df["Time"] = pandas.to_datetime(self.df["Time"])
 
 
-    def gettimerange(self):
+    def get_timespans(self):
         times = self.df["Time"]
         maxtime, mintime = max(times), min(times)
-        return maxtime,mintime
+
+        y = []
+        m = []
+        d =[]
+        h = []
+        M = []
+        S = []
+
+        timedelta = maxtime-mintime
+        try:
+            for i in range(0,timedelta.years+1):
+                step = (mintime+datetime.timedelta(years=i)).year
+                if step not in y:
+                    y.append(step)
+        except:
+            y = [x for x in range(mintime.year, maxtime.year+1)]
+
+
+        try:
+            for i in range(0,timedelta.months+1):
+                step = (mintime+datetime.timedelta(months=i)).month
+                if step not in m:
+                    m.append(step)
+        except:
+            m = [x for x in range(mintime.month, maxtime.month+1)]
+
+
+        try:
+            for i in range(0,timedelta.days+1):
+                step = (mintime+datetime.timedelta(days=i)).day
+                if step not in d:
+                    d.append(step)
+        except:
+            d = [x for x in range(mintime.day, maxtime.day+1)]
+
+        try:
+            for i in range(0,timedelta.hours+1):
+                step = (mintime+datetime.timedelta(hours=i)).hour
+                if step not in h:
+                    h.append(step)
+        except:
+            h = [x for x in range(0, 24)]
+
+
+        try:
+            for i in range(0,timedelta.minutes+1):
+                step = (mintime+datetime.timedelta(minutes=i)).minute
+                if step not in M:
+                    M.append(step)
+        except:
+            M = [x for x in range(0,60)]
+
+
+        try:
+            for i in range(0,timedelta.seconds+1):
+                step = (mintime+datetime.timedelta(seconds=i)).second
+                if step not in s:
+                    s.append(step)
+        except:
+            s = [x*15 for x in range(0,5)]
+
+
+        return y,m,d,h,M,s
 
 
     def load_experimental_data(self, delimeter='\n', new=True):
