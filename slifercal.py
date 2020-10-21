@@ -20,7 +20,8 @@ import gc
 
 
 global fig_x_dim, fig_y_dim, dpi
-fig_x_dim, fig_y_dim, dpi = 32,18, 300
+fig_x_dim, fig_y_dim, dpi = 8,4.5, 300
+font = {'size': 4}
 
 
 class sliferCal(object):
@@ -657,19 +658,8 @@ class sliferCal(object):
         plt.close('all')
         plt.clf()
         gc.collect()
-
-
-        fig_x_basic_info = (0.25/16)*fig_x_dim
-        fig_y_basic_info = (8.1/9)*fig_y_dim
-        fig_x_end_range_data = (13/16)*fig_x_dim
-        fig_x_start_range_data = (1.75/16)*fig_x_dim
-        fig_y_range_data = (4.3/9)*fig_y_dim
-        fig_x_logbook_comment = (0.25/16)*fig_x_dim
-        fig_y_logbook_comment = (4.25/9)*fig_y_dim
-        fig_x_timestamp = (0.25/16)*fig_x_dim
-        fig_y_anchor_timestamp = (4.1/9)*fig_y_dim
-        fig_y_step_timestamp = (.15/18)*fig_y_dim
-        fig_x_comment_start = (1.2/16)*fig_x_dim
+        plt.rc('font', **font)
+        plt.locator_params(axis='y', nbins=8)
 
         try:
             self.df
@@ -737,10 +727,7 @@ class sliferCal(object):
             graph.set_xlabel(xaxis)
             
             for index,column in enumerate(thermistors):
-                try:
-                    graph.plot(df_xslice,df_yslice[column], label=column)
-                except TypeError as e:
-                    print("Having issues with", column, "reporting", e)
+                graph.scatter(df_xslice,df_yslice[column], label=column, s=3)
 
             graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
             graph.xaxis_date()
@@ -754,9 +741,7 @@ class sliferCal(object):
             else:
                 plt.show()
         else:
-            print("Bad Date selection.")
-
-        
+            print("Bad Date selection.")  
 
 
     def omniview_in_terminal(self,thermistors=[]):
@@ -891,10 +876,12 @@ class sliferCal(object):
         fig_y_range_data = (4.3/9)*fig_y_dim
         fig_x_logbook_comment = (0.25/16)*fig_x_dim
         fig_y_logbook_comment = (4.25/9)*fig_y_dim
-        fig_x_timestamp = (0.25/16)*fig_x_dim
-        fig_y_anchor_timestamp = (4.1/9)*fig_y_dim
-        fig_y_step_timestamp = (.15/18)*fig_y_dim
-        fig_x_comment_start = (1.2/16)*fig_x_dim
+
+        fig_x_timestamp = fig_x_dim/640
+        fig_y_anchor_timestamp = 55*fig_y_dim/128
+        fig_y_step_timestamp = 2*fig_y_dim/135
+        fig_x_comment_start = 5*fig_x_dim/64
+        fig_x_comment_rowshift = 85*fig_x_dim/256
 
         if kernel[1] > 0:
             fig = plt.figure(figsize=(fig_x_dim,fig_y_dim), dpi=dpi_val)
@@ -1046,8 +1033,9 @@ class sliferCal(object):
         # THERE IS CURRENTLY A BUG WHERE IF COMMENTS ARE SET TO TRUE, IN THE GUI DATE-GRAPHER THIS THING WILL DROP TIMESTAMPS
         # ON THE COMMENTS OF THE FIGURES. I HAVE YET TO FIND OUT WHAT IS CAUSING THAT, BUT FOR NOW THE PROGRAM WORKS. 
         #
-        #fig_x_dim = 32
-        #fig_y_dim = 18
+        """
+        orig_x_dim = 32
+        orig_y_dim = 18
         fig_x_basic_info = (0.25/16)*fig_x_dim
         fig_y_basic_info = (8.1/9)*fig_y_dim
         fig_x_end_range_data = (13/16)*fig_x_dim
@@ -1059,6 +1047,17 @@ class sliferCal(object):
         fig_y_anchor_timestamp = (4.1/9)*fig_y_dim
         fig_y_step_timestamp = (.15/18)*fig_y_dim
         fig_x_comment_start = (1.2/16)*fig_x_dim
+        """
+        maxcolumnlen=30
+
+
+        fig_x_timestamp = fig_x_dim/640
+        fig_y_anchor_timestamp = 55*fig_y_dim/128
+        fig_y_step_timestamp = 2*fig_y_dim/135
+        fig_x_comment_start = 5*fig_x_dim/64
+        fig_x_comment_rowshift = 85*fig_x_dim/256
+
+
         avg_comments = []
         poi = True
         v = 0
@@ -1069,27 +1068,27 @@ class sliferCal(object):
         trip = True
         for index, row in logbook_slice.iterrows():
             modified_comment, y = self.graph_comment_formater(row["Comment"])
-            v += y
+            v += y # Current line
             timestamp = row["Time"]
             have_i_printed = False
             old_v = v
             old_n = n
-            if v > 54:
+            if v > maxcolumnlen:
                 if not shift:
-                    fig_x_comment_start += 10.7
-                    fig_x_timestamp += 10.7
+                    fig_x_comment_start += fig_x_comment_rowshift
+                    fig_x_timestamp += fig_x_comment_rowshift
                     shift = True
-                elif not shift_2 and v > 108:
-                    fig_x_comment_start += 10.7
-                    fig_x_timestamp += 10.7
+                elif not shift_2 and v > 2*maxcolumnlen:
+                    fig_x_comment_start += fig_x_comment_rowshift
+                    fig_x_timestamp += fig_x_comment_rowshift
                     shift_2 = True
                 
-                if v > 108:
-                    v -= 108
-                    n -= 108
+                if v > 2*maxcolumnlen:
+                    v -= 2*maxcolumnlen
+                    n -= 2*maxcolumnlen
                 else:
-                    v -= 55
-                    n -= 55
+                    v -= (maxcolumnlen+1)
+                    n -= (maxcolumnlen+1)
             try:
                 if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
                     canvas.annotate(
@@ -1139,7 +1138,7 @@ class sliferCal(object):
                 have_i_printed = True
             v = old_v
             v += 1
-            if shift_2 and v > 200:
+            if shift_2 and v > 3*maxcolumnlen:
                 print("WARNING: Out of lab-book comment space on figure. Consider selecting a narrower plotting range if labbook comment insight is critical.")
                 return canvas,graph
 
@@ -1157,12 +1156,11 @@ class sliferCal(object):
 
 
     def graph_comment_formater(self, comment):
-        # MAX COLUMN LENGTH 55
         ls = list(str(comment))
         n = 0
-        testval=110
+        linelength = 69
         for element in range(0, len(ls)):
-            if element % testval == 0 and element != 0:
+            if element % linelength == 0 and element != 0:
                 if re.search('[a-zA-Z]', ls[element]):
                     ls.insert(element-1, '-')
                 ls.insert(element, '\n')

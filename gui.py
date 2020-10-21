@@ -6,14 +6,14 @@ tja1015@wildats.unh.edu
 Proceed Formally.
 """
 from slifercal import sliferCal
-import gc # garbage
 import tkinter as tk
 import tkinter.scrolledtext as scrolledtext
 from tkinter import filedialog
 from statistics import mode
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg, NavigationToolbar2Tk)
-import datetime, pandas, os
+import datetime, pandas, os, gc, matplotlib
+
 """
 I have almost no practice with GUIs. All this stuff is self taught
 and found in the library's documentation.
@@ -152,10 +152,6 @@ class Omni_View(File_Selector):
         self.finalframe = tk.LabelFrame(self.toggleables_frame, text="Finalize")
         self.finalframe.grid(column=1,row=4)
 
-
-        self.graph = tk.LabelFrame(self, text="Graph")
-        self.graph.grid(column=2, row=2)
-        
     def fetch_instance(self, instance):
         self.instance = instance
         self.populate_toggleables()
@@ -184,11 +180,12 @@ class Omni_View(File_Selector):
         comments = True if self.comments.get()=='1' else False
 
         self.figure = self.instance.omniview_gui(u_start,u_end, thermistors, xaxis, comments=comments, save_fig=False, gui=True)
-
+        self.graph = tk.LabelFrame(self, text="Graph")
+        self.graph.grid(column=2, row=2)
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph)
-            
         self.canvas.draw()
         self.canvas.get_tk_widget().pack()
+    
     def populate_toggleables(self):
         self.generate_ychannels()
         self.generate_ylabelentry()
@@ -215,7 +212,6 @@ class Omni_View(File_Selector):
                 thermistors.append(key)
         return thermistors
 
-
     def generate_timeselection(self):
         y,m,d,h,M,s = self.instance.get_timespans()
 
@@ -230,13 +226,7 @@ class Omni_View(File_Selector):
         self.maxsecond = tk.StringVar(value=max(y)), tk.StringVar(value=max(m)),\
             tk.StringVar(value=max(d)), tk.StringVar(value=max(h)), tk.StringVar(value=max(M)),\
             tk.StringVar(value=max(s))
-
-        
-        
-        
-        ###   Creating Timerange
-        
-
+     
         self.minlabelframe = tk.LabelFrame(self.timeframe,text="Approximate Start Date")
         self.minlabelframe.grid(column=1, row=1, padx=30)
 
@@ -272,7 +262,6 @@ class Omni_View(File_Selector):
         self.minsecondpulldown = tk.OptionMenu(self.mintimeframe, self.minsecond, *s)
         self.minsecondpulldown.grid(column=1,row=3)
         
-
 
         self.maxlabelframe = tk.LabelFrame(self.timeframe,text="Approximate End Date")
         self.maxlabelframe.grid(column=2, row=1, padx=30)
