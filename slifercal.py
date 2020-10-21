@@ -20,7 +20,7 @@ import gc
 
 
 global fig_x_dim, fig_y_dim, dpi
-fig_x_dim, fig_y_dim, dpi = 8,4.5, 300
+fig_x_dim, fig_y_dim, dpi = 32,18, 300
 
 
 class sliferCal(object):
@@ -650,10 +650,15 @@ class sliferCal(object):
         return self.df
 
 
-    def omniview_gui(self, user_start, user_end, thermistors, xaxis, comments=False, save_fig=False, dpi_val=150):
+    def omniview_gui(self, user_start, user_end, thermistors, xaxis, comments=False, save_fig=False, dpi_val=150, gui=False):
         #       
         #       An in-memory way of viewing data from a particular timerange
-        #       
+        #
+        plt.close('all')
+        plt.clf()
+        gc.collect()
+
+
         fig_x_basic_info = (0.25/16)*fig_x_dim
         fig_y_basic_info = (8.1/9)*fig_y_dim
         fig_x_end_range_data = (13/16)*fig_x_dim
@@ -671,12 +676,6 @@ class sliferCal(object):
         except AttributeError:
             self.load_experimental_data()
 
-        to_drop = []
-        for thermistor in self.df:
-            if thermistor != "Time" and thermistor not in thermistors:
-                to_drop.append(thermistor)
-        self.df.drop(labels=to_drop, axis=1, inplace=True)
-        surviving_columns = self.df.columns.to_list()
         start_date = min(self.df['Time'])
         end_date = max(self.df['Time'])
         start_index = self.df[self.df['Time']==start_date].index.to_list()[0]
@@ -704,7 +703,7 @@ class sliferCal(object):
             data_end_index = self.df[self.df['Time'] == self.__nearest(user_end, self.df['Time'])].index.to_list()[0]
             print("End index located.", data_end_index)
             delta = data_end_index-data_start_index
-            index_modulus = (delta*(len(surviving_columns)-1))/max_datapoints
+            index_modulus = (delta*(len(thermistors)-1))/max_datapoints
 
             
             if index_modulus <= 1:
@@ -735,10 +734,13 @@ class sliferCal(object):
 
             print("Sliced", k, "datapoints from", delta, "Total datapoints", "between", user_start, "and", user_end)
             graph.title.set_text("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
-            graph.set_xlabel("Time")
+            graph.set_xlabel(xaxis)
             
-            for column in df_yslice:
-                graph.plot(df_xslice,df_yslice[column], label=column)
+            for index,column in enumerate(thermistors):
+                try:
+                    graph.plot(df_xslice,df_yslice[column], label=column)
+                except TypeError as e:
+                    print("Having issues with", column, "reporting", e)
 
             graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
             graph.xaxis_date()
@@ -746,18 +748,15 @@ class sliferCal(object):
 
 
             if save_fig == True:
-                if comments:
-                    plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_")+"wc")
-                else:
-                    plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
+                plt.savefig(user_start.strftime("%m_%d_%Y_%H_%M_%S")+"_to_"+user_end.strftime("%m_%d_%Y_%H_%M_%S_"))
+            elif gui:
+                return fig
             else:
                 plt.show()
         else:
             print("Bad Date selection.")
 
-        plt.close('all')
-        plt.clf()
-        gc.collect()
+        
 
 
     def omniview_in_terminal(self,thermistors=[]):

@@ -134,8 +134,11 @@ class Omni_View(File_Selector):
         self.title = tk.Label(self, text="Omni-View")
         self.title.grid(column=1, row=1)
 
-        self.toggleables_frame = tk.LabelFrame(self, text="Options")
-        self.toggleables_frame.grid(column=1, row=2)
+        self.frame1 = tk.Frame(self)
+        self.frame1.grid(column=1,row=2)
+
+        self.toggleables_frame = tk.LabelFrame(self.frame1, text="Options")
+        self.toggleables_frame.grid(column=1, row=1)
 
         self.ychannel_frame = tk.LabelFrame(self.toggleables_frame, text="Y-Axis Selection")
         self.ychannel_frame.grid(column=1, row=1)
@@ -148,6 +151,10 @@ class Omni_View(File_Selector):
 
         self.finalframe = tk.LabelFrame(self.toggleables_frame, text="Finalize")
         self.finalframe.grid(column=1,row=4)
+
+
+        self.graph = tk.LabelFrame(self, text="Graph")
+        self.graph.grid(column=2, row=2)
         
     def fetch_instance(self, instance):
         self.instance = instance
@@ -176,6 +183,12 @@ class Omni_View(File_Selector):
         xaxis = self.xaxisvalue.get()
         comments = True if self.comments.get()=='1' else False
 
+        self.figure = self.instance.omniview_gui(u_start,u_end, thermistors, xaxis, comments=comments, save_fig=False, gui=True)
+
+        self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph)
+            
+        self.canvas.draw()
+        self.canvas.get_tk_widget().pack()
     def populate_toggleables(self):
         self.generate_ychannels()
         self.generate_ylabelentry()
@@ -196,10 +209,11 @@ class Omni_View(File_Selector):
         self.backbutton.grid(column=1, row=3)
 
     def get_selected_thermistors(self):
-        print("\n"*4)
+        thermistors = []
         for key in self.checkbuttons:
             if self.checkbuttons[key].get() == '1':
-                print(key)
+                thermistors.append(key)
+        return thermistors
 
 
     def generate_timeselection(self):
