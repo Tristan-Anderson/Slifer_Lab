@@ -303,14 +303,14 @@ class Omni_View(File_Selector):
         self.xpulldown = tk.OptionMenu(self.x_frame, self.xaxisvalue, *self.plottable_ys)
         self.xpulldown.grid(column=1,row=1)
         
-        self.xentryframe = tk.Frame(self.x_frame)
-        self.xentryframe.grid(column=1, row=2)
-        self.xlabel = tk.StringVar(value="Time")
-
-        self.xaxislabel = tk.Label(self.xentryframe, text="X-Axis Label")
-        self.xlabelentry = tk.Entry(self.xentryframe, textvariable=self.xlabel)
-        self.xaxislabel.grid(column=1, row=1)
-        self.xlabelentry.grid(column=2,row=1)
+        """self.xentryframe = tk.Frame(self.x_frame)
+                                self.xentryframe.grid(column=1, row=2)
+                                self.xlabel = tk.StringVar(value="Time")
+                        
+                                self.xaxislabel = tk.Label(self.xentryframe, text="X-Axis Label")
+                                self.xlabelentry = tk.Entry(self.xentryframe, textvariable=self.xlabel)
+                                self.xaxislabel.grid(column=1, row=1)
+                                self.xlabelentry.grid(column=2,row=1)"""
 
     def generate_ychannels(self):
         self.yaxisselection_subframe = tk.Frame(self.ychannel_frame)

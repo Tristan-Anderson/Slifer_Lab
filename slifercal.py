@@ -21,7 +21,8 @@ import gc
 
 global fig_x_dim, fig_y_dim, dpi
 fig_x_dim, fig_y_dim, dpi = 8,4.5, 300
-font = {'size': 4}
+
+
 
 
 class sliferCal(object):
@@ -658,8 +659,11 @@ class sliferCal(object):
         plt.close('all')
         plt.clf()
         gc.collect()
+        font = {'size': 4}
         plt.rc('font', **font)
         
+        y_sarebad = False
+        x_sarebad = False
 
         try:
             self.df
@@ -700,12 +704,32 @@ class sliferCal(object):
                 df_yslice = self.df.iloc[data_start_index:data_end_index:1]
             else:
                 df_yslice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
-            ycut = df_yslice.drop("Time", axis=1, inplace=True)
-
-
-            df_xslice = self.df.loc[df_yslice.index.tolist(),xaxis] # GENERALIZE it.
-            df_timeslice = self.df.loc[df_yslice.index.tolist(),"Time"]
+            print(df_yslice)
+            df_yslice = df_yslice.convert_dtypes()
+            print(df_yslice)
+            df_xslice = self.df.loc[df_yslice.index.tolist(),xaxis].to_numpy() # GENERALIZE it.
             
+            if 'Time' not in xaxis:
+                a2 = []
+                for index, value in enumerate(df_xslice):
+                    to_fix = list(str(value))
+                    to_delete = []
+                    for index,character in enumerate(to_fix):
+                        if re.search(r'[\!\@\#\$\%\^\&\*\(\)\=\{\}\[\]\ \+]', character):
+                            to_delete.append(index)
+                    for i in sorted(to_delete,reverse=True):
+                        del to_fix[i]
+                    #print(index, "".join(to_fix))
+                    a2.append("".join(to_fix))
+                df_xslice = numpy.array(a2,dtype=numpy.float64)
+                try:
+                    df_xslice = df_xslice.astype(float)
+                except ValueError as e:
+                    x_sarebad = True
+                    print("Can not convert", xaxis, "To numeric. X-Axis tick errors may occur.")
+            
+            df_timeslice = self.df.loc[df_yslice.index.tolist(),"Time"]
+
             k = len(df_xslice)
             
             if comments:
@@ -727,13 +751,30 @@ class sliferCal(object):
             graph.title.set_text("Data between "+user_start.strftime("%m/%d/%Y, %H:%M:%S")+" and "+user_end.strftime("%m/%d/%Y, %H:%M:%S"))
             graph.set_xlabel(xaxis)
             
-            for index,column in enumerate(thermistors):
+
+            for column in thermistors:
                 graph.scatter(df_xslice,df_yslice[column], label=column, s=3)
-            if 'time' in xaxis:
+            
+            if 'Time' in xaxis:
                 graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
                 graph.xaxis_date()
+                pass
+
+            if y_sarebad:
+                yticks = graph.get_yticks()
+                cool_yticks = [yticks[i] for i in range(0,len(yticks), int(len(yticks)/10)+1)]
+                graph.set_yticks(cool_yticks)
+            if x_sarebad:
+                xticks = graph.get_xticks()
+                cool_xticks = [xticks[i] for i in range(0,len(xticks), int(len(xticks)/10)+1)]
+                graph.set_xticks(cool_xticks)
+
+            #print(self.df['Mmwaves Frequency (GHz)'])
+
+
+            #print(self.df)
             graph.legend(loc='best')
-            plt.locator_params(axis='y', nbins=8)
+            #plt.locator_params(axis='y', nbins=8)
 
 
             if save_fig == True:
