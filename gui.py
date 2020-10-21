@@ -178,8 +178,14 @@ class Omni_View(File_Selector):
         thermistors = self.get_selected_thermistors()
         xaxis = self.xaxisvalue.get()
         comments = True if self.comments.get()=='1' else False
+        ylabel = self.ylabel
 
-        self.figure = self.instance.omniview_gui(u_start,u_end, thermistors, xaxis, comments=comments, save_fig=False, gui=True)
+        self.figure = self.instance.omniview_gui(\
+                            u_start,u_end, thermistors, xaxis, yaxis=self.ylabel.get(), 
+                            comments=comments, save_fig=False, gui=True\
+                            )
+        
+
         self.graph = tk.LabelFrame(self, text="Graph")
         self.graph.grid(column=2, row=2)
         self.canvas = FigureCanvasTkAgg(self.figure, master=self.graph)

@@ -652,10 +652,16 @@ class sliferCal(object):
         return self.df
 
 
-    def omniview_gui(self, user_start, user_end, thermistors, xaxis, comments=False, save_fig=False, dpi_val=150, gui=False):
+    def omniview_gui(self, user_start, user_end, thermistors, xaxis, **kwargs):
         #       
         #       An in-memory way of viewing data from a particular timerange
         #
+        comments=kwargs.pop("comments",False)
+        save_fig=kwargs.pop("save_fig",False)
+        dpi_val=kwargs.pop("dpi_val",150)
+        gui=kwargs.pop("gui",False)
+        ylabel=kwargs.pop("ylabel", "Ohms")
+
         plt.close('all')
         plt.clf()
         gc.collect()
@@ -704,31 +710,23 @@ class sliferCal(object):
                 df_yslice = self.df.iloc[data_start_index:data_end_index:1]
             else:
                 df_yslice = self.df.iloc[data_start_index:data_end_index:round(index_modulus)]
-            print(df_yslice)
-            df_yslice = df_yslice.convert_dtypes()
-            print(df_yslice)
-            df_xslice = self.df.loc[df_yslice.index.tolist(),xaxis].to_numpy() # GENERALIZE it.
             
+            df_yslice = df_yslice.convert_dtypes()
+            df_xslice = self.df.loc[df_yslice.index.tolist(),xaxis].to_numpy() # GENERALIZE it.
+            df_timeslice = self.df.loc[df_yslice.index.tolist(),"Time"]
+
+
             if 'Time' not in xaxis:
-                a2 = []
-                for index, value in enumerate(df_xslice):
-                    to_fix = list(str(value))
-                    to_delete = []
-                    for index,character in enumerate(to_fix):
-                        if re.search(r'[\!\@\#\$\%\^\&\*\(\)\=\{\}\[\]\ \+]', character):
-                            to_delete.append(index)
-                    for i in sorted(to_delete,reverse=True):
-                        del to_fix[i]
-                    #print(index, "".join(to_fix))
-                    a2.append("".join(to_fix))
-                df_xslice = numpy.array(a2,dtype=numpy.float64)
+                df_xsclice = self.__fix_dfslice(df_xslice)
                 try:
                     df_xslice = df_xslice.astype(float)
                 except ValueError as e:
                     x_sarebad = True
                     print("Can not convert", xaxis, "To numeric. X-Axis tick errors may occur.")
-            
-            df_timeslice = self.df.loc[df_yslice.index.tolist(),"Time"]
+            yvals = {}
+            for column in thermistors:
+                if "time" not in column:
+                    yvals[column] = self.__fix_dfslice(df_yslice[column])
 
             k = len(df_xslice)
             
@@ -753,7 +751,7 @@ class sliferCal(object):
             
 
             for column in thermistors:
-                graph.scatter(df_xslice,df_yslice[column], label=column, s=3)
+                graph.scatter(df_xslice,yvals[column], label=column, s=3)
             
             if 'Time' in xaxis:
                 graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
@@ -769,12 +767,8 @@ class sliferCal(object):
                 cool_xticks = [xticks[i] for i in range(0,len(xticks), int(len(xticks)/10)+1)]
                 graph.set_xticks(cool_xticks)
 
-            #print(self.df['Mmwaves Frequency (GHz)'])
 
-
-            #print(self.df)
             graph.legend(loc='best')
-            #plt.locator_params(axis='y', nbins=8)
 
 
             if save_fig == True:
@@ -786,6 +780,28 @@ class sliferCal(object):
         else:
             print("Bad Date selection.")  
 
+    def __fix_dfslice(self,dfslice):
+        a2 = []
+        for index, value in enumerate(dfslice):
+            to_fix = list(str(value))
+            to_delete = []
+            offs = []
+            ##### Mark all non-alphanumerica special characters for deletion #####
+            for index,character in enumerate(to_fix):
+                if re.search(r'[\!\@\#\$\%\^\&\*\(\)\=\{\}\[\]\ \+]', character):
+                    to_delete.append(index)
+            ######################################################################
+            if "off" in value or "Off" in value:
+                # Set all offs to zero.
+                offs.append(index)
+                to_fix = ['0']
+            else:
+                for i in sorted(to_delete,reverse=True):
+                    if i not in offs:
+                        del to_fix[i]
+            #print(index, "".join(to_fix))
+            a2.append("".join(to_fix))
+        return numpy.array(a2,dtype=numpy.float64)
 
     def omniview_in_terminal(self,thermistors=[]):
 
