@@ -1,3 +1,12 @@
+"""
+Tristan Anderson
+
+tja1015@wildcats.unh.edu
+
+
+A good programming language is like a bycicle for the mind.
+                                    - Chris Lattner
+"""
 import time, pandas, numpy, copy, datetime, os, traceback, dateutil.parser, multiprocessing, re
 from multiprocessing import Pool
 from pandas.plotting import register_matplotlib_converters
