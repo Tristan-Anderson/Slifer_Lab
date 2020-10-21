@@ -315,7 +315,7 @@ class Omni_View(File_Selector):
     def generate_ychannels(self):
         self.yaxisselection_subframe = tk.Frame(self.ychannel_frame)
         self.yaxisselection_subframe.grid(column=1,row=1)
-        plottable_keywords = ["(Ohms)", "Magnet", "waves", "(K)", "level", "Torr", "Time"]
+        plottable_keywords = ["(Ohms)", "Magnet", "waves", "(K)", "level", "Torr", "Time", "Polarization"]
         self.buttons, self.checkbuttons = {},{}
         ycols = self.instance.get_columns()
         ycols_sorted = sorted(ycols, key=lambda word: (".R" not in word, word))

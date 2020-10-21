@@ -659,7 +659,7 @@ class sliferCal(object):
         plt.clf()
         gc.collect()
         plt.rc('font', **font)
-        plt.locator_params(axis='y', nbins=8)
+        
 
         try:
             self.df
@@ -703,7 +703,8 @@ class sliferCal(object):
             ycut = df_yslice.drop("Time", axis=1, inplace=True)
 
 
-            df_xslice = self.df.loc[df_yslice.index.tolist(),"Time"]#,xaxis] # GENERALIZE it.
+            df_xslice = self.df.loc[df_yslice.index.tolist(),xaxis] # GENERALIZE it.
+            df_timeslice = self.df.loc[df_yslice.index.tolist(),"Time"]
             
             k = len(df_xslice)
             
@@ -717,7 +718,7 @@ class sliferCal(object):
                 logbook_slice = self.logbook_df[logbook_start_index:logbook_end_index]
                 print("Commenting Graph.")
                 canvas, graph = self.__commenter(canvas, graph, logbook_slice, 
-                                             df_xslice, rng_ss=data_start_index, 
+                                             df_timeslice, rng_ss=data_start_index, 
                                              rng_ee=data_end_index, avg=90, dpi_val=dpi_val
                                              )
 
@@ -728,10 +729,11 @@ class sliferCal(object):
             
             for index,column in enumerate(thermistors):
                 graph.scatter(df_xslice,df_yslice[column], label=column, s=3)
-
-            graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
-            graph.xaxis_date()
+            if 'time' in xaxis:
+                graph.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y/%m/%d %H:%M'))
+                graph.xaxis_date()
             graph.legend(loc='best')
+            plt.locator_params(axis='y', nbins=8)
 
 
             if save_fig == True:
@@ -1029,7 +1031,7 @@ class sliferCal(object):
             return True
 
 
-    def __commenter(self, canvas, graph, logbook_slice, df_xslice, rng_ss=0, keywords=[], rng_ee=0, avg=0, dpi_val=300):
+    def __commenter(self, canvas, graph, logbook_slice, df_timeslice, rng_ss=0, keywords=[], rng_ee=0, avg=0, dpi_val=300):
         # THERE IS CURRENTLY A BUG WHERE IF COMMENTS ARE SET TO TRUE, IN THE GUI DATE-GRAPHER THIS THING WILL DROP TIMESTAMPS
         # ON THE COMMENTS OF THE FIGURES. I HAVE YET TO FIND OUT WHAT IS CAUSING THAT, BUT FOR NOW THE PROGRAM WORKS. 
         #
@@ -1090,7 +1092,7 @@ class sliferCal(object):
                     v -= (maxcolumnlen+1)
                     n -= (maxcolumnlen+1)
             try:
-                if df_xslice[rng_ss] <= timestamp and timestamp <= df_xslice[rng_ee-1]:
+                if df_timeslice[rng_ss] <= timestamp and timestamp <= df_timeslice[rng_ee-1]:
                     canvas.annotate(
                         timestamp, 
                         xy=(fig_x_timestamp*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*n)*dpi_val), 
@@ -1109,7 +1111,7 @@ class sliferCal(object):
             n += 1
             n += y
             if any(x in str(row["Comment"]) for x in keywords):
-                if min(df_xslice) <= row["Time"] and row["Time"] <= max(df_xslice): 
+                if min(df_timeslice) <= row["Time"] and row["Time"] <= max(df_timeslice): 
                     canvas.annotate(
                         modified_comment, 
                         xy=(fig_x_comment_start*dpi_val,(fig_y_anchor_timestamp-fig_y_step_timestamp*v)*dpi_val),
@@ -1159,12 +1161,19 @@ class sliferCal(object):
         ls = list(str(comment))
         n = 0
         linelength = 69
+        to_rm = []
         for element in range(0, len(ls)):
+            if re.search(r'[\_\+\*\[\]\$\^\(\)\{\}\|\\]', ls[element]):
+                    to_rm.append(element)
             if element % linelength == 0 and element != 0:
                 if re.search('[a-zA-Z]', ls[element]):
                     ls.insert(element-1, '-')
                 ls.insert(element, '\n')
                 n += 1
+        #print("".join(ls))
+        for i in sorted(to_rm,reverse=True):
+            del ls[i]
+        #print("".join(ls))
         str_to_return = "".join(ls)
         return str_to_return, n
 
